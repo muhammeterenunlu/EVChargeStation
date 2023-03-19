@@ -1,14 +1,13 @@
 import random
 import json
 import networkx as nx
-import pandas as pd
 import numpy as np
 from sklearn.cluster import KMeans
 
 print("Please wait for the process. Graphs are being created...")
 
 # Generate a random graph with random number of nodes and edges
-num_nodes = random.randint(10, 50)
+num_nodes = random.randint(10, 20)
 num_edges = random.randint(num_nodes, num_nodes * (num_nodes - 1) // 2)
 G = nx.gnm_random_graph(num_nodes, num_edges)
 
@@ -25,9 +24,6 @@ for node in G.nodes:
 
 # Define the number of dynamic graphs to create
 num_dynamic_graphs = 1000
-
-# Create an empty DataFrame to store the dynamic graph information
-df = pd.DataFrame(columns=['Graph', 'Node', 'Population', 'Traffic', 'Network'])
 
 # Create an empty list to store the data
 data = []

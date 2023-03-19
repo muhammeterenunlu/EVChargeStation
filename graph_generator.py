@@ -8,7 +8,7 @@ from sklearn.cluster import KMeans
 print("Please wait for the process. Graphs are being created...")
 
 # Generate a random graph with random number of nodes and edges
-num_nodes = random.randint(5, 20)
+num_nodes = random.randint(10, 50)
 num_edges = random.randint(num_nodes, num_nodes * (num_nodes - 1) // 2)
 G = nx.gnm_random_graph(num_nodes, num_edges)
 
@@ -136,10 +136,13 @@ for node in nodes:
 # Convert data to a 2D numpy array for clustering
 X = np.array([[datum['Population'], datum['Traffic'], datum['Network']] for datum in averaged_data])
 
+n_clusters = random.randint(round(num_nodes/4),round(num_nodes/2))
+
 # Apply K-Means clustering algorithm
-kmeans = KMeans(n_clusters=5, random_state=0).fit(X)
+kmeans = KMeans(n_clusters, random_state=0).fit(X)
 labels = kmeans.labels_
 
 # Print results
+print(f"Number of clusters: {n_clusters}")
 for i, datum in enumerate(averaged_data):
-    print(f"Node {datum['Node']}: Cluster {labels[i]}")
+    print(f"Node {datum['Node']}: Cluster {labels[i] + 1}")

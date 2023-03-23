@@ -152,6 +152,7 @@ class GraphGenerator:
         # Compute average values for each node
         nodes = set(datum['Node'] for datum in self.dynamic_graphs_data)
 
+        # Compute average values for each node and add them to the averaged_data list
         for node in nodes:
             population_sum = 0
             traffic_sum = 0

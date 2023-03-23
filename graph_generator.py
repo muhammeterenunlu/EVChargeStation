@@ -192,6 +192,7 @@ class GraphGenerator:
         # Add cluster labels and total cost to the data
         for i, datum in enumerate(averaged_data):
             self.utility_cost_data.append({
+                'Location': datum['Node'],
                 'Utility': labels[i] + 1, 
                 'Total Cost': datum['Total Cost of 1 CS']})
             

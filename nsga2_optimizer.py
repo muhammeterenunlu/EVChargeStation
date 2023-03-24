@@ -47,7 +47,7 @@ def optimize_charging_stations(utility_cost_data, num_nodes, total_charging_stat
     pop = toolbox.population(n=population_size)
 
     # Run the NSGA-II algorithm
-    pop, logbook = algorithms.eaMuPlusLambda(pop, toolbox, mu=population_size, lambda_=population_size, cxpb=crossover_probability, mutpb=mutation_probability, ngen=generations, verbose=False)
+    algorithms.eaMuPlusLambda(pop, toolbox, mu=population_size, lambda_=population_size, cxpb=crossover_probability, mutpb=mutation_probability, ngen=generations, verbose=False)
 
     # Get the best solution
     best_solution = tools.selBest(pop, 1)[0]

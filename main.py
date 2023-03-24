@@ -10,18 +10,21 @@ def main():
     generate_graph.write_static_json()
     generate_graph.write_dynamics_json()
     generate_graph.kmeans_clustering()
+    
+    # Optimize the number of charging stations
     total_charging_stations = round(generate_graph.num_nodes * 10)
     min_charging_stations = 1
     max_charging_stations = max(1, round(total_charging_stations / generate_graph.num_nodes))
 
+    # Run NSGA-II
     best_solution, best_utility, best_cost = optimize_charging_stations(generate_graph.utility_cost_data, generate_graph.num_nodes, total_charging_stations, min_charging_stations, max_charging_stations)
 
-    # Print the results
+    # Print the results of NSGA-II
     print(f"Best solution: {best_solution}")
     print(f"Best utility: {best_utility}")
     print(f"Best cost: {best_cost}")
 
-    # Optional: Save the best solution to a file
+    # Save the best solution to a file in JSON format
     with open('best_solution.json', 'w') as f:
         json.dump({'Node': list(range(generate_graph.num_nodes)), 'Charging Stations': best_solution}, f, indent=4)
     

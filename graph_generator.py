@@ -9,7 +9,7 @@ class GraphGenerator:
     # init or constructor method to initialize the class
     def __init__(self):
         # Generate a random graph with random number of nodes and edges
-        self.num_nodes = random.randint(10, 20)
+        self.num_nodes = random.randint(50, 200)
         self.num_edges = random.randint(self.num_nodes, self.num_nodes * (self.num_nodes - 1) // 2)
 
         # Create the initial static graph

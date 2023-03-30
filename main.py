@@ -1,5 +1,6 @@
 from graph_generator import GraphGenerator
-from nsga2_optimizer import optimize_charging_stations
+from nsga2_optimizer import optimize_charging_stations, visualize_charging_stations
+
 import json
 
 def main():
@@ -12,7 +13,6 @@ def main():
     generate_graph.write_dynamics_json()
     generate_graph.kmeans_clustering()
     
-
     # Set the total number of charging stations that can be installed
     total_charging_stations = round(generate_graph.num_nodes * 10)
     print(f"Maximum number of charging stations that can be installed: {total_charging_stations}")
@@ -23,6 +23,9 @@ def main():
 
     # Run NSGA-II
     best_solution, best_utility, best_cost = optimize_charging_stations(generate_graph.utility_cost_data, generate_graph.num_nodes, total_charging_stations, min_charging_stations, max_charging_stations)
+    
+    # Visualize the best solution found by NSGA-II
+    visualize_charging_stations(generate_graph.utility_cost_data, best_solution)
 
     print(f"Total number of charging stations that are installed: {sum(best_solution)}")
     

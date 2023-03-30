@@ -74,25 +74,24 @@ class GraphGenerator:
                 edge = random.choice(list(dg.edges))
                 u, v = edge
                 transfer_amount = random.uniform(0, 1)
-                sum_traffic = dg.nodes[u]['traffic'] + dg.nodes[v]['traffic']
-                sum_network = dg.nodes[u]['network'] + dg.nodes[v]['network']
-                sum_population = dg.nodes[u]['population'] + dg.nodes[v]['population']
-                new_u_traffic = (sum_traffic - transfer_amount * sum_traffic) / 2
-                new_v_traffic = sum_traffic - new_u_traffic
-                new_u_network = (sum_network - transfer_amount * sum_network) / 2
-                new_v_network = sum_network - new_u_network
-                new_u_population = (sum_population - transfer_amount * sum_population) / 2
-                new_v_population = sum_population - new_u_population
-                dg.nodes[u]['traffic'] = new_u_traffic
-                dg.nodes[v]['traffic'] = new_v_traffic
-                dg.nodes[u]['network'] = new_u_network
-                dg.nodes[v]['network'] = new_v_network
-                dg.nodes[u]['population'] = new_u_population
-                dg.nodes[v]['population'] = new_v_population
+                
+                attributes = ['traffic', 'network', 'population']
+                
+                # Randomly choose one of the two nodes
+                chosen_node, other_node = random.choice([(u, v), (v, u)])
+                
+                for attr in attributes:
+                    sum_attr = dg.nodes[chosen_node][attr] + dg.nodes[other_node][attr]
+                    new_chosen_node_attr = (1 - transfer_amount) * sum_attr
+                    new_other_node_attr = sum_attr - new_chosen_node_attr
+
+                    dg.nodes[chosen_node][attr] = new_chosen_node_attr
+                    dg.nodes[other_node][attr] = new_other_node_attr
+
             except KeyError:
                 print("Error: KeyError occurred while trying to update node attributes.")
                 continue
-
+            
             # Calculate population, traffic and network changes for each node
             if previous_dg is None:
                 for node in dg.nodes:

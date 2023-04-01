@@ -32,6 +32,8 @@ def main():
     # Save the best solution to a file in JSON format
     best_solution_dict = {
         'Total Number of Installed Charging Stations': sum(best_solution),
+        'Total Utility': sum(generate_graph.utility_cost_data[i]['Total Utility of 1 CS'] * best_solution[i] for i in range(generate_graph.num_nodes)),
+        'Total Cost': int(sum(generate_graph.utility_cost_data[i]['Total Cost of 1 CS'] * best_solution[i] for i in range(generate_graph.num_nodes))),
         'Charging Stations': {f'Node {i}': best_solution[i] for i in range(generate_graph.num_nodes)}
     }
     with open('best_solution.json', 'w') as f:

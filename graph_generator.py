@@ -8,6 +8,7 @@ class GraphGenerator:
 
     # init or constructor method to initialize the class
     def __init__(self):
+
         # Generate a random graph with random number of nodes and edges
         self.num_nodes = random.randint(50, 200)
         self.num_edges = random.randint(self.num_nodes, self.num_nodes * (self.num_nodes - 1) // 2)
@@ -82,7 +83,7 @@ class GraphGenerator:
                 
                 for attr in attributes:
                     sum_attr = dg.nodes[chosen_node][attr] + dg.nodes[other_node][attr]
-                    new_chosen_node_attr = (1 - transfer_amount) * sum_attr
+                    new_chosen_node_attr = int((1 - transfer_amount) * sum_attr)
                     new_other_node_attr = sum_attr - new_chosen_node_attr
 
                     dg.nodes[chosen_node][attr] = new_chosen_node_attr
@@ -178,8 +179,8 @@ class GraphGenerator:
                 'Population_change': population_change_sum / count,
                 'Traffic_change': traffic_change_sum / count,
                 'Network_change': network_change_sum / count,
-                'Total Utility of 1 CS': 0.15 * population_sum / count + 0.3 * traffic_sum / count + 0.05 * network_sum / count + 0.15 * population_change_sum / count + 0.3 * traffic_change_sum / count + 0.05 * network_change_sum / count,
-                'Total Cost of 1 CS': total_cost_sum / count})
+                'Total Utility of 1 CS': int(0.3 * population_sum / count + 0.6 * traffic_sum / count + 0.1 * network_sum / count),
+                'Total Cost of 1 CS': int(total_cost_sum / count)})
 
         # Convert data to a 2D numpy array for clustering
         X = np.array([

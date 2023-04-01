@@ -30,7 +30,6 @@ def main():
     print(f"Total number of charging stations that are installed: {sum(best_solution)}")
     
     # Print the results of NSGA-II
-    print(f"Best solution: {best_solution}")
     print(f"Best utility: {best_utility}")
     print(f"Best cost: {int(best_cost)}")
 

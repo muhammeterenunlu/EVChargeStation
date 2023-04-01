@@ -32,11 +32,17 @@ def main():
     # Print the results of NSGA-II
     print(f"Best solution: {best_solution}")
     print(f"Best utility: {best_utility}")
-    print(f"Best cost: {best_cost}")
+    print(f"Best cost: {int(best_cost)}")
 
     # Save the best solution to a file in JSON format
+    best_solution_dict = {
+        'Total Number of Installed Charging Stations': sum(best_solution),
+        'Best Utility': best_utility,
+        'Best Cost': int(best_cost),
+        'Charging Stations': {f'Node {i}': best_solution[i] for i in range(generate_graph.num_nodes)}
+    }
     with open('best_solution.json', 'w') as f:
-        json.dump({'Node': list(range(generate_graph.num_nodes)), 'Charging Stations': best_solution}, f, indent=4)
+        json.dump(best_solution_dict, f, indent=4)
     
 if __name__ == "__main__":
     main()

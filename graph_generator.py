@@ -178,31 +178,42 @@ class GraphGenerator:
                 'Population_change': population_change_sum / count,
                 'Traffic_change': traffic_change_sum / count,
                 'Network_change': network_change_sum / count,
+                'Total Utility of 1 CS': 0.15 * population_sum / count + 0.3 * traffic_sum / count + 0.05 * network_sum / count + 0.15 * population_change_sum / count + 0.3 * traffic_change_sum / count + 0.05 * network_change_sum / count,
                 'Total Cost of 1 CS': total_cost_sum / count})
 
         # Convert data to a 2D numpy array for clustering
         X = np.array([
             [
-                0.3 * datum['Population'] + 0.6 * datum['Traffic'] + 0.1 * datum['Network'],
-                0.3 * datum['Population_change'] + 0.6 * datum['Traffic_change'] + 0.1 * datum['Network_change']
+                datum['Total Utility of 1 CS'],
+                datum['Total Cost of 1 CS']
             ]
             for datum in averaged_data
         ])
 
-        # Apply K-Means clustering algorithm
-        kmeans = KMeans(n_clusters, random_state=0).fit(X)
-        labels = kmeans.labels_.tolist()
+        # Apply K-Means clustering algorithm for utility
+        kmeans_utility = KMeans(n_clusters, random_state=0).fit(X[:, [0]]) # Only consider the first column (utility) 
+        utility_labels = kmeans_utility.labels_.tolist()
 
-        # Reverse the cluster labels so that higher labels have higher utility
-        max_label = max(labels)
-        reversed_labels = [max_label - label for label in labels]
+        # Apply K-Means clustering algorithm for cost
+        kmeans_cost = KMeans(n_clusters, random_state=0).fit(X[:, [1]])  # Only consider the second column (cost)
+        cost_labels = kmeans_cost.labels_.tolist()
 
-        # Add cluster labels and total cost to the data
+        # Reverse the utility cluster labels so that higher labels have higher utility
+        max_utility_label = max(utility_labels)
+        utility_labels = [max_utility_label - label for label in utility_labels]
+
+        # Reverse the cost cluster labels so that higher label represents higher cost
+        max_cost_label = max(cost_labels)
+        cost_labels = [max_cost_label - label for label in cost_labels]
+
+        # Add utility and cost cluster labels and total cost to the data
         for i, datum in enumerate(averaged_data):
             self.utility_cost_data.append({
                 'Location': datum['Node'],
-                'Utility': reversed_labels[i] + 1,  # Use reversed_labels instead of labels
-                'Total Cost': datum['Total Cost of 1 CS']})
+                'Utility Specified By Using ML': utility_labels[i] + 1,
+                'Cost Specified By Using ML': cost_labels[i] + 1,
+                'Total Utility of 1 CS': datum['Total Utility of 1 CS'],
+                'Total Cost of 1 CS': datum['Total Cost of 1 CS']})
             
         # Write cluster data to a JSON file
         with open('utility_cost_data.json', 'w') as f:

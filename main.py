@@ -22,22 +22,16 @@ def main():
     max_charging_stations = round((total_charging_stations / generate_graph.num_nodes)*2)
 
     # Run NSGA-II
-    best_solution, best_utility, best_cost = optimize_charging_stations(generate_graph.utility_cost_data, generate_graph.num_nodes, total_charging_stations, min_charging_stations, max_charging_stations)
+    best_solution = optimize_charging_stations(generate_graph.utility_cost_data, generate_graph.num_nodes, total_charging_stations, min_charging_stations, max_charging_stations)
     
     # Visualize the best solution found by NSGA-II
     visualize_charging_stations(generate_graph.utility_cost_data, best_solution)
 
     print(f"Total number of charging stations that are installed: {sum(best_solution)}")
-    
-    # Print the results of NSGA-II
-    print(f"Best utility: {best_utility}")
-    print(f"Best cost: {int(best_cost)}")
 
     # Save the best solution to a file in JSON format
     best_solution_dict = {
         'Total Number of Installed Charging Stations': sum(best_solution),
-        'Best Utility': best_utility,
-        'Best Cost': int(best_cost),
         'Charging Stations': {f'Node {i}': best_solution[i] for i in range(generate_graph.num_nodes)}
     }
     with open('best_solution.json', 'w') as f:

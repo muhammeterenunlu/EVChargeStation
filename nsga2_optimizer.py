@@ -7,10 +7,10 @@ from deap import base, creator, tools, algorithms
 def optimize_charging_stations(utility_cost_data, num_nodes, total_charging_stations, min_charging_stations, max_charging_stations):
     # Objective functions
     def total_utility(individual):
-        return sum(utility_cost_data[i]['Utility'] * individual[i] for i in range(num_nodes))
+        return sum(utility_cost_data[i]['Total Utility of 1 CS'] * individual[i] for i in range(num_nodes))
 
     def total_cost(individual):
-        return sum(utility_cost_data[i]['Total Cost'] * individual[i] for i in range(num_nodes))
+        return sum(utility_cost_data[i]['Total Cost of 1 CS'] * individual[i] for i in range(num_nodes))
 
     # Constraint function
     def total_charging_stations_constraint(individual):
@@ -55,8 +55,8 @@ def optimize_charging_stations(utility_cost_data, num_nodes, total_charging_stat
     # Get the best solution
     best_solution = tools.selBest(pop, 1)[0]
 
-    # Return the best solution and corresponding utility and cost
-    return best_solution, total_utility(best_solution), total_cost(best_solution)
+    # Return the best solution found by NSGA-II
+    return best_solution
     
 def visualize_charging_stations(utility_cost_data, best_solution):
     node_indices = np.arange(len(utility_cost_data))

@@ -193,11 +193,15 @@ class GraphGenerator:
         kmeans = KMeans(n_clusters, random_state=0).fit(X)
         labels = kmeans.labels_.tolist()
 
+        # Reverse the cluster labels so that higher labels have higher utility
+        max_label = max(labels)
+        reversed_labels = [max_label - label for label in labels]
+
         # Add cluster labels and total cost to the data
         for i, datum in enumerate(averaged_data):
             self.utility_cost_data.append({
                 'Location': datum['Node'],
-                'Utility': labels[i] + 1, 
+                'Utility': reversed_labels[i] + 1,  # Use reversed_labels instead of labels
                 'Total Cost': datum['Total Cost of 1 CS']})
             
         # Write cluster data to a JSON file

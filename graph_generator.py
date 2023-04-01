@@ -33,8 +33,8 @@ class GraphGenerator:
             population = random.randint(100000, 1000000)
             traffic = random.uniform(0, 1)
             network = random.uniform(0, 1)
-            transportation_cost = random.uniform(100, 1000)
-            charge_station_cost = random.uniform(1000, 10000)
+            transportation_cost = random.randint(100, 1000)
+            charge_station_cost = random.randint(1000, 10000)
             self.G.nodes[node]['population'] = population
             self.G.nodes[node]['traffic'] = traffic
             self.G.nodes[node]['network'] = network
@@ -139,7 +139,6 @@ class GraphGenerator:
         with open('dynamic_graphs_data.json', 'w') as f:
             json.dump(self.dynamic_graphs_data, f, indent=4)
 
-
     # K-means clustering. Each cluster represents utility of a charge station.
     def kmeans_clustering(self):
         averaged_data = []
@@ -182,7 +181,13 @@ class GraphGenerator:
                 'Total Cost of 1 CS': total_cost_sum / count})
 
         # Convert data to a 2D numpy array for clustering
-        X = np.array([[datum['Population'], datum['Traffic'], datum['Network'], datum['Population_change'], datum['Traffic_change'], datum['Network_change']] for datum in averaged_data])
+        X = np.array([
+            [
+                0.3 * datum['Population'] + 0.6 * datum['Traffic'] + 0.1 * datum['Network'],
+                0.3 * datum['Population_change'] + 0.6 * datum['Traffic_change'] + 0.1 * datum['Network_change']
+            ]
+            for datum in averaged_data
+        ])
 
         # Apply K-Means clustering algorithm
         kmeans = KMeans(n_clusters, random_state=0).fit(X)

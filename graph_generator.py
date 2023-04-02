@@ -192,11 +192,11 @@ class GraphGenerator:
         ])
 
         # Apply K-Means clustering algorithm for utility
-        kmeans_utility = KMeans(n_clusters, random_state=0).fit(X[:, [0]]) # Only consider the first column (utility) 
+        kmeans_utility = KMeans(n_clusters, random_state=0, n_init='auto').fit(X[:, [0]]) # Only consider the first column (utility) 
         utility_labels = kmeans_utility.labels_.tolist()
 
         # Apply K-Means clustering algorithm for cost
-        kmeans_cost = KMeans(n_clusters, random_state=0).fit(X[:, [1]])  # Only consider the second column (cost)
+        kmeans_cost = KMeans(n_clusters, random_state=0, n_init='auto').fit(X[:, [1]])  # Only consider the second column (cost)
         cost_labels = kmeans_cost.labels_.tolist()
 
         # Reverse the utility cluster labels so that higher labels have higher utility

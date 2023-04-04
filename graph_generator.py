@@ -75,13 +75,9 @@ class GraphGenerator:
         plt.show()
     
     def write_connected_nodes_json(self):
-        connected_nodes = []
+        connected_nodes = [{"Node": edge[0], "Node": edge[1]} for edge in self.G.edges]
 
-        # Loop through the edges of the initial static graph and store the connected nodes
-        for edge in self.G.edges:
-            connected_nodes.append({"Node 1": edge[0], "Node 2": edge[1]})
-
-        # Write the connected nodes to a JSON file
+        # Write the connected nodes data to a JSON file
         with open('connected_nodes.json', 'w') as f:
             json.dump(connected_nodes, f, indent=4)
 

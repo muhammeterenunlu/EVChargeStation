@@ -8,13 +8,14 @@ class GraphGenerator:
 
     # init or constructor method to initialize the class
     def __init__(self):
+        connected = False
         while not connected:
-            # Generate a random graph with a random number of nodes and edges
+            # Generate a random graph with a random number of nodes and edge creation probability
             self.num_nodes = random.randint(50, 200)
-            self.num_edges = 0.25
+            edge_creation_prob = 0.25
 
             # Create the initial static graph
-            self.G = nx.gnm_random_graph(self.num_nodes, self.num_edges)
+            self.G = nx.gnp_random_graph(self.num_nodes, edge_creation_prob)
 
             # Check if the graph is connected
             connected = nx.is_connected(self.G)
@@ -130,7 +131,7 @@ class GraphGenerator:
                      'Charge Station Cost of 1 CS': charge_station_cost,
                      'Total Cost of 1 CS': transportation_cost + charge_station_cost})
 
-        print(f"{self.num_nodes} nodes and {self.num_edges} edges generated for the initial static graph.")
+        print(f"{self.num_nodes} nodes and {self.G.number_of_edges()} edges generated for the initial static graph.")
         print(f"{self.num_dynamic_graphs} dynamic graphs generated.")
 
     # Write the data of the initial static graph to a JSON file

@@ -2,6 +2,7 @@ import random
 import json
 import networkx as nx
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 
 class GraphGenerator:
@@ -11,14 +12,17 @@ class GraphGenerator:
         connected = False
         while not connected:
             # Generate a random graph with a random number of nodes and edge creation probability
-            self.num_nodes = random.randint(50, 200)
-            edge_creation_prob = 0.25
+            self.num_nodes = random.randint(10, 50)
+            edge_creation_prob = 0.05
 
             # Create the initial static graph
             self.G = nx.gnp_random_graph(self.num_nodes, edge_creation_prob)
 
             # Check if the graph is connected
             connected = nx.is_connected(self.G)
+
+        # Visualize the initial static graph
+        self.visualize_graph()
 
         # Define the number of dynamic graphs to create
         self.num_dynamic_graphs = random.randint(500,1000)
@@ -59,6 +63,15 @@ class GraphGenerator:
                  'Transportation Cost of 1 CS': transportation_cost,
                  'Charge Station Cost of 1 CS': charge_station_cost,
                  'Total Cost of 1 CS': transportation_cost + charge_station_cost})
+
+    def visualize_graph(self):
+        pos = nx.spring_layout(self.G)
+        nx.draw(self.G, pos, with_labels=True, node_color='skyblue', edge_color='black', node_size=1000, font_size=16, font_weight='bold', width=1.5)
+        plt.show()
+
+        # Save the visualization to a file
+        plt.savefig('initial_static_graph.png', dpi=300)
+        plt.close()
 
     def dynamic_graph_generator(self):
         previous_dg = None

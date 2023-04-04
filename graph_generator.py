@@ -11,7 +11,7 @@ class GraphGenerator:
         while not connected:
             # Generate a random graph with a random number of nodes and edges
             self.num_nodes = random.randint(50, 200)
-            self.num_edges = random.randint(self.num_nodes, self.num_nodes * (self.num_nodes - 1) // 2)
+            self.num_edges = 0.25
 
             # Create the initial static graph
             self.G = nx.gnm_random_graph(self.num_nodes, self.num_edges)

@@ -8,13 +8,16 @@ class GraphGenerator:
 
     # init or constructor method to initialize the class
     def __init__(self):
+        while not connected:
+            # Generate a random graph with a random number of nodes and edges
+            self.num_nodes = random.randint(50, 200)
+            self.num_edges = random.randint(self.num_nodes, self.num_nodes * (self.num_nodes - 1) // 2)
 
-        # Generate a random graph with random number of nodes and edges
-        self.num_nodes = random.randint(50, 200)
-        self.num_edges = random.randint(self.num_nodes, self.num_nodes * (self.num_nodes - 1) // 2)
+            # Create the initial static graph
+            self.G = nx.gnm_random_graph(self.num_nodes, self.num_edges)
 
-        # Create the initial static graph
-        self.G = nx.gnm_random_graph(self.num_nodes, self.num_edges)
+            # Check if the graph is connected
+            connected = nx.is_connected(self.G)
 
         # Define the number of dynamic graphs to create
         self.num_dynamic_graphs = random.randint(500,1000)

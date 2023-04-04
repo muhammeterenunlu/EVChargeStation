@@ -24,6 +24,9 @@ class GraphGenerator:
         # Visualize the initial static graph
         self.visualize_graph()
 
+        # Write the connected nodes to a JSON file
+        self.write_connected_nodes_json()
+
         # Define the number of dynamic graphs to create
         self.num_dynamic_graphs = random.randint(500,1000)
 
@@ -66,12 +69,21 @@ class GraphGenerator:
 
     def visualize_graph(self):
         pos = nx.spring_layout(self.G)
-        nx.draw(self.G, pos, with_labels=True, node_color='skyblue', edge_color='black', node_size=1000, font_size=16, font_weight='bold', width=1.5)
-        plt.show()
-
+        nx.draw(self.G, pos, with_labels=True, node_color='skyblue', edge_color='black', node_size=250, font_size=6, font_weight='bold', width=1.5)
         # Save the visualization to a file
         plt.savefig('initial_static_graph.png', dpi=300)
-        plt.close()
+        plt.show()
+    
+    def write_connected_nodes_json(self):
+        connected_nodes = []
+
+        # Loop through the edges of the initial static graph and store the connected nodes
+        for edge in self.G.edges:
+            connected_nodes.append({"Node 1": edge[0], "Node 2": edge[1]})
+
+        # Write the connected nodes to a JSON file
+        with open('connected_nodes.json', 'w') as f:
+            json.dump(connected_nodes, f, indent=4)
 
     def dynamic_graph_generator(self):
         previous_dg = None

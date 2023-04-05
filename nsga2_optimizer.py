@@ -21,11 +21,20 @@ def optimize_charging_stations(utility_cost_data, num_nodes, total_charging_stat
     creator.create("FitnessMultiObjective", base.Fitness, weights=(1.0, -1.0))
     creator.create("Individual", list, fitness=creator.FitnessMultiObjective)
 
-    # Initialize toolbox
+    # Initialize a DEAP toolbox object that will store various components required for the NSGA-II algorithm
     toolbox = base.Toolbox()
+
+    # Register 'attr_int' as an integer attribute generator that generates random integers between min_charging_stations and max_charging_stations
     toolbox.register("attr_int", random.randint, min_charging_stations, max_charging_stations)
+
+    # Register 'individual' as a function that creates an individual (solution) by repeatedly calling the 'attr_int' function num_nodes times
+    # The resulting individual is a list of integers representing the number of charging stations at each node
     toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_int, num_nodes)
+
+    # Register 'population' as a function that creates a list of individuals (a population) by repeatedly calling the 'individual' function
+    # The number of individuals in the population will be specified when the function is called
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
 
     # Define evaluation and selection functions
     def evaluate(individual):
@@ -34,11 +43,25 @@ def optimize_charging_stations(utility_cost_data, num_nodes, total_charging_stat
     def feasible(individual):
         return total_charging_stations_constraint(individual)
 
+    # Register 'mate' as a function that performs uniform crossover on two individuals with the specified probability of exchanging each attribute (indpb)
+    # In this case, the probability of exchanging each attribute between two individuals is 0.5 (50%)
     toolbox.register("mate", tools.cxUniform, indpb=0.5)
+
+    # Register 'mutate' as a function that performs uniform integer mutation on an individual with the specified mutation range and probability of mutating each attribute (indpb)
+    # In this case, the mutation range is between min_charging_stations and max_charging_stations, and the probability of mutating each attribute is 0.1 (10%)
     toolbox.register("mutate", tools.mutUniformInt, low=min_charging_stations, up=max_charging_stations, indpb=0.1)
+
+    # Register 'select' as a function that performs selection using the NSGA-II algorithm
     toolbox.register("select", tools.selNSGA2)
+
+    # Register 'evaluate' as a function that calculates the objective values (total utility and total cost) of an individual
     toolbox.register("evaluate", evaluate)
+
+    # Add a decorator to the 'evaluate' function to enforce the constraint that the total number of charging stations should not exceed the specified limit
+    # The DeltaPenalty function applies a penalty to the objective values of infeasible individuals, making them less likely to be selected
+    # In this case, a large penalty of (-1e9, -1e9) is applied to both objective values if the constraint is not satisfied
     toolbox.decorate("evaluate", tools.DeltaPenalty(feasible, (-1e9, -1e9)))
+
 
     # Set parameters for the NSGA-II algorithm
     population_size = 100

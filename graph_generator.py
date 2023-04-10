@@ -21,12 +21,6 @@ class GraphGenerator:
             # Check if the graph is connected
             connected = nx.is_connected(self.G)
 
-        # Visualize the initial static graph
-        self.visualize_graph()
-
-        # Write the connected nodes to a JSON file
-        self.write_connected_nodes_json()
-
         # Define the number of dynamic graphs to create
         self.num_dynamic_graphs = random.randint(500,1000)
 
@@ -67,7 +61,7 @@ class GraphGenerator:
                  'Charge Station Cost of 1 CS': charge_station_cost,
                  'Total Cost of 1 CS': transportation_cost + charge_station_cost})
 
-    def visualize_graph(self):
+    def visualize_initial_static_graph(self):
         pos = nx.spring_layout(self.G)
         nx.draw(self.G, pos, with_labels=True, node_color='skyblue', edge_color='black', node_size=250, font_size=6, font_weight='bold', width=1.5)
         # Save the visualization to a file
@@ -243,7 +237,7 @@ class GraphGenerator:
         # Add utility and cost cluster labels and total cost to the data
         for i, datum in enumerate(averaged_data):
             self.utility_cost_data.append({
-                'Location': datum['Node'],
+                'Node': datum['Node'],
                 'Utility Specified By Using ML': utility_labels[i] + 1,
                 'Cost Specified By Using ML': cost_labels[i] + 1,
                 'Total Utility of 1 CS': datum['Total Utility of 1 CS'],

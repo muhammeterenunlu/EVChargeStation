@@ -12,7 +12,7 @@ class GraphGenerator:
         connected = False
         while not connected:
             # Generate a random graph with a random number of nodes and edge creation probability
-            self.num_nodes = random.randint(10, 50)
+            self.num_nodes = 20
             edge_creation_prob = 0.05
 
             # Create the initial static graph

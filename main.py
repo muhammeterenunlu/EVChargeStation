@@ -1,8 +1,6 @@
 from graph_generator import GraphGenerator
 from nsga2_optimizer import NSGA2Optimizer
 
-import json
-
 def main():
     # Generate the initial static graph and the dynamic graphs
     print("Please wait for the process. Graphs are being created...")

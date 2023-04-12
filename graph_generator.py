@@ -23,13 +23,10 @@ class GraphGenerator:
             connected = nx.is_connected(self.G)
 
         # Define the number of dynamic graphs to create
-        self.num_dynamic_graphs = random.randint(500,1000)
+        self.num_dynamic_graphs = random.randint(5000,10000)
 
         # Create an empty list to store the data of the initial static graph
         self.static_graph_data = []
-
-        # Assign density categories and flow ranges to the edges in the static graph
-        self.assign_edge_densities()
 
         # Create an empty list to store the data of the dynamic graphs
         self.dynamic_graphs_data = []
@@ -41,9 +38,11 @@ class GraphGenerator:
     def static_graph_generator(self):
         # Add random attributes to each node in the initial static graph
         for node in self.G.nodes:
-            population = random.randint(100000, 1000000)
+            population = random.randint(10000, 100000)
             traffic = random.uniform(0, 1)
             network = random.uniform(0, 1)
+            traffic = traffic * population
+            network = network * population
             transportation_cost = random.randint(100, 1000)
             charge_station_cost = random.randint(1000, 10000)
             self.G.nodes[node]['population'] = population

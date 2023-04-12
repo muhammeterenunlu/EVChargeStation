@@ -3,6 +3,7 @@ import json
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.lines
 from sklearn.cluster import KMeans
 
 class GraphGenerator:
@@ -86,6 +87,9 @@ class GraphGenerator:
     def visualize_initial_static_graph(self):
         pos = nx.spring_layout(self.G)
 
+        # Add a title to the plot
+        plt.title('Initial Static Graph')
+
         # Define edge colors based on their densities
         edge_colors = []
         for edge in self.G.edges:
@@ -98,6 +102,13 @@ class GraphGenerator:
                 edge_colors.append('yellow')
 
         nx.draw(self.G, pos, with_labels=True, node_color='skyblue', edge_color=edge_colors, node_size=250, font_size=6, font_weight='bold', width=1.5)
+
+        # Add a legend explaining the edge colors
+        legend_elements = [matplotlib.lines.Line2D([0], [0], color='red', lw=2, label='VERY DENSE'),
+                        matplotlib.lines.Line2D([0], [0], color='orange', lw=2, label='MEDIUM DENSE'),
+                        matplotlib.lines.Line2D([0], [0], color='yellow', lw=2, label='LOW DENSE')]
+
+        plt.legend(handles=legend_elements, loc='lower right', fontsize='small', title='Edge Density')
 
         # Save the visualization to a file
         plt.savefig('initial_static_graph.png', dpi=300)

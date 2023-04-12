@@ -27,11 +27,15 @@ class GraphGenerator:
         # Create an empty list to store the data of the initial static graph
         self.static_graph_data = []
 
+        # Assign density categories and flow ranges to the edges in the static graph
+        self.assign_edge_densities()
+
         # Create an empty list to store the data of the dynamic graphs
         self.dynamic_graphs_data = []
 
         # Create an empty list to store the data of the clusters
         self.utility_cost_data = []
+
 
     def static_graph_generator(self):
         # Add random attributes to each node in the initial static graph
@@ -60,14 +64,45 @@ class GraphGenerator:
                  'Transportation Cost of 1 CS': transportation_cost,
                  'Charge Station Cost of 1 CS': charge_station_cost,
                  'Total Cost of 1 CS': transportation_cost + charge_station_cost})
+        # Assign densities to the edges of the static graph
+        self.assign_edge_densities()
 
+    # Function to assign density categories and flow ranges to the edges in the static graph
+    def assign_edge_densities(self):
+        for edge in self.G.edges:
+            density_category = random.choice(['VERY DENSE', 'MEDIUM DENSE', 'LOW DENSE'])
+
+            if density_category == 'VERY DENSE':
+                flow_range = (0.65, 0.95)
+            elif density_category == 'MEDIUM DENSE':
+                flow_range = (0.35, 0.65)
+            elif density_category == 'LOW DENSE':
+                flow_range = (0.05, 0.35)
+
+            lower_bound, upper_bound = flow_range
+            self.G.edges[edge]['density_category'] = density_category
+            self.G.edges[edge]['flow'] = random.uniform(lower_bound, upper_bound)
+    
     def visualize_initial_static_graph(self):
         pos = nx.spring_layout(self.G)
-        nx.draw(self.G, pos, with_labels=True, node_color='skyblue', edge_color='black', node_size=250, font_size=6, font_weight='bold', width=1.5)
+
+        # Define edge colors based on their densities
+        edge_colors = []
+        for edge in self.G.edges:
+            density = self.G.edges[edge]['density_category']
+            if density == 'VERY DENSE':
+                edge_colors.append('red')
+            elif density == 'MEDIUM DENSE':
+                edge_colors.append('orange')
+            elif density == 'LOW DENSE':
+                edge_colors.append('yellow')
+
+        nx.draw(self.G, pos, with_labels=True, node_color='skyblue', edge_color=edge_colors, node_size=250, font_size=6, font_weight='bold', width=1.5)
+
         # Save the visualization to a file
         plt.savefig('initial_static_graph.png', dpi=300)
         plt.show()
-    
+
     def write_connected_nodes_json(self):
         connected_nodes = {}
         node_ids = sorted(self.G.nodes)
@@ -101,8 +136,18 @@ class GraphGenerator:
                 # Pick a random edge and transfer a random amount of the attributes between the two nodes connected to that edge, while maintaining their sum
                 edge = random.choice(list(dg.edges))
                 u, v = edge
-                transfer_amount = random.uniform(0, 1)
+                density_category = self.G.edges[edge]['density_category']
                 
+                # Define the transfer range based on the density category
+                if density_category == 'VERY DENSE':
+                    transfer_range = (0.65, 0.95)
+                elif density_category == 'MEDIUM DENSE':
+                    transfer_range = (0.35, 0.65)
+                elif density_category == 'LOW DENSE':
+                    transfer_range = (0.05, 0.35)
+                
+                transfer_amount = random.uniform(*transfer_range)
+                    
                 attributes = ['traffic', 'network', 'population']
                 
                 # Randomly choose one of the two nodes
@@ -119,7 +164,7 @@ class GraphGenerator:
             except KeyError:
                 print("Error: KeyError occurred while trying to update node attributes.")
                 continue
-            
+
             # Calculate population, traffic and network changes for each node
             if previous_dg is None:
                 for node in dg.nodes:

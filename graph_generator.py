@@ -31,6 +31,9 @@ class GraphGenerator:
         # Create an empty list to store the data of the dynamic graphs
         self.dynamic_graphs_data = []
 
+        # Create a dictionary to count how many times each node has been selected
+        self.selected_node_counter = {node: 0 for node in range(self.num_nodes)}
+
         # Create an empty list to store the data of the clusters
         self.utility_cost_data = []
 
@@ -38,13 +41,13 @@ class GraphGenerator:
     def static_graph_generator(self):
         # Add random attributes to each node in the initial static graph
         for node in self.G.nodes:
-            population = random.randint(10000, 100000)
+            population = random.randint(50000, 100000)
             traffic = random.uniform(0, 1)
             network = random.uniform(0, 1)
             traffic = traffic * population
             network = network * population
-            transportation_cost = random.randint(100, 1000)
-            charge_station_cost = random.randint(1000, 10000)
+            transportation_cost = random.randint(500, 1000)
+            charge_station_cost = random.randint(5000, 10000)
             self.G.nodes[node]['population'] = population
             self.G.nodes[node]['traffic'] = traffic
             self.G.nodes[node]['network'] = network
@@ -162,6 +165,10 @@ class GraphGenerator:
                 
                 # Randomly choose one of the two nodes
                 chosen_node, other_node = random.choice([(u, v), (v, u)])
+
+                # Increment the selected node counter
+                self.selected_node_counter[chosen_node] += 1
+                self.selected_node_counter[other_node] += 1
                 
                 for attr in attributes:
                     sum_attr = dg.nodes[chosen_node][attr] + dg.nodes[other_node][attr]
@@ -211,6 +218,7 @@ class GraphGenerator:
 
         print(f"{self.num_nodes} nodes and {self.G.number_of_edges()} edges generated for the initial static graph.")
         print(f"{self.num_dynamic_graphs} dynamic graphs generated.")
+        #print("Selected node counts:", self.selected_node_counter)
 
     # Write the data of the initial static graph to a JSON file
     def write_static_json(self):
@@ -230,7 +238,7 @@ class GraphGenerator:
         with open('dynamic_graphs_data.json') as f:
             self.dynamic_graphs_data = json.load(f)
 
-        # Compute average values for each node
+        # Get the set of nodes
         nodes = set(datum['Node'] for datum in self.dynamic_graphs_data)
 
         # Compute average values for each node and add them to the averaged_data list
@@ -261,7 +269,7 @@ class GraphGenerator:
                 'Population_change': population_change_sum / count,
                 'Traffic_change': traffic_change_sum / count,
                 'Network_change': network_change_sum / count,
-                'Total Utility of 1 CS': int(0.3 * population_sum / count + 0.6 * traffic_sum / count + 0.1 * network_sum / count),
+                'Total Utility of 1 CS': int(0.25 * (0.3 * population_sum / count + 0.6 * traffic_sum / count + 0.1 * network_sum / count) + 0.75 * (0.3 * abs(population_change_sum) / count + 0.6 * abs(traffic_change_sum) / count + 0.1 * abs(network_change_sum) / count)),
                 'Total Cost of 1 CS': int(total_cost_sum / count)})
 
         # Convert data to a 2D numpy array for clustering

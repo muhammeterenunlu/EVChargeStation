@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.lines
 from sklearn.cluster import KMeans
+from kneed import KneeLocator
 
 class GraphGenerator:
 
@@ -256,7 +257,6 @@ class GraphGenerator:
     # K-means clustering. Each cluster represents utility of a charge station.
     def kmeans_clustering(self):
         averaged_data = []
-        n_clusters = random.randint(round(self.num_nodes/4),round(self.num_nodes/2))
         # Load JSON data 
         with open('dynamic_graphs_data.json') as f:
             self.dynamic_graphs_data = json.load(f)
@@ -303,6 +303,19 @@ class GraphGenerator:
             ]
             for datum in averaged_data
         ])
+
+        # Determine the optimal number of clusters using the Elbow Method
+        sse = []
+        k_candidates = range(1, round(self.num_nodes/2) + 1)
+        for k in k_candidates:
+            kmeans = KMeans(n_clusters=k, random_state=0, n_init=10)
+            kmeans.fit(X)
+            sse.append(kmeans.inertia_)
+
+        # Find the elbow point in the SSE curve
+        kl = KneeLocator(k_candidates, sse, curve="convex", direction="decreasing")
+        n_clusters = kl.elbow
+        print(f"Optimal number of clusters: {n_clusters}")
 
         # Apply K-Means clustering algorithm for utility (arrange n_init = 10 default value on MAC OS)
         kmeans_utility = KMeans(n_clusters, random_state=0, n_init=10).fit(X[:, [0]]) # Only consider the first column (utility) 

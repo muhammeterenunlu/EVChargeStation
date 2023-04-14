@@ -1,5 +1,6 @@
 import random
 import json
+import itertools
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,22 +9,29 @@ from sklearn.cluster import KMeans
 
 class GraphGenerator:
 
-    # init or constructor method to initialize the class
     def __init__(self):
         connected = False
-        while not connected:
-            # Generate a random graph with a random number of nodes and edge creation probability
-            self.num_nodes = 20
-            edge_creation_prob = 0.05
+        self.edge_creation_prob = 0.05
+        self.num_nodes = 20
 
-            # Create the initial static graph
-            self.G = nx.gnp_random_graph(self.num_nodes, edge_creation_prob)
+        while not connected:
+            # Generate a random graph
+            self.G = nx.gnp_random_graph(self.num_nodes, self.edge_creation_prob)
+
+            # Ensure the minimum degree of each node is at least 2
+            for node in self.G.nodes():
+                if self.G.degree(node) < 2:
+                    connected_neighbors = list(self.G.neighbors(node))
+                    available_nodes = set(self.G.nodes()) - set(connected_neighbors) - {node}
+                    new_edges = random.sample(available_nodes, 2 - self.G.degree(node))
+                    for new_edge in new_edges:
+                        self.G.add_edge(node, new_edge)
 
             # Check if the graph is connected
             connected = nx.is_connected(self.G)
 
         # Define the number of dynamic graphs to create
-        self.num_dynamic_graphs = random.randint(5000,10000)
+        self.num_dynamic_graphs = random.randint(1000,2000)
 
         # Create an empty list to store the data of the initial static graph
         self.static_graph_data = []
@@ -31,12 +39,13 @@ class GraphGenerator:
         # Create an empty list to store the data of the dynamic graphs
         self.dynamic_graphs_data = []
 
-        # Create a dictionary to count how many times each node has been selected
-        self.selected_node_counter = {node: 0 for node in range(self.num_nodes)}
-
         # Create an empty list to store the data of the clusters
         self.utility_cost_data = []
 
+        # Ensure the number of dynamic graphs is divisible by the number of edges
+        num_edges = self.G.number_of_edges()
+        while self.num_dynamic_graphs % num_edges != 0:
+            self.num_dynamic_graphs += 1
 
     def static_graph_generator(self):
         # Add random attributes to each node in the initial static graph
@@ -136,21 +145,32 @@ class GraphGenerator:
         population_change = {}
         traffic_change = {}
         network_change = {}
+        # Create a dictionary to count how many times each node has been selected
+        #self.selected_node_counter = {node: 0 for node in range(self.num_nodes)}
+        edge_list = list(self.G.edges)
+        # = {edge: 0 for edge in edge_list}  # Initialize a dictionary to store edge selection counts
 
         # Create dynamic graphs
         for i in range(self.num_dynamic_graphs):
+            if i % len(edge_list) == 0:
+                random.shuffle(edge_list)  # Shuffle the edge list every time it completes a cycle
+                edge_cycle = itertools.cycle(edge_list)
             if i == 0:
                 # Create the first dynamic graph based on the initial static graph
                 dg = self.G.copy()
             else:
                 # Create a new dynamic graph based on the previous dynamic graph
                 dg = dg.copy()
+
+            # Get the next edge in the cycle
+            edge = next(edge_cycle)
+            #edge_selection_count[edge] += 1
+            #print(edge)
+
             try:
-                # Pick a random edge and transfer a random amount of the attributes between the two nodes connected to that edge, while maintaining their sum
-                edge = random.choice(list(dg.edges))
                 u, v = edge
                 density_category = self.G.edges[edge]['density_category']
-                
+
                 # Define the transfer range based on the density category
                 if density_category == 'VERY DENSE':
                     transfer_range = (0.65, 0.95)
@@ -167,8 +187,8 @@ class GraphGenerator:
                 chosen_node, other_node = random.choice([(u, v), (v, u)])
 
                 # Increment the selected node counter
-                self.selected_node_counter[chosen_node] += 1
-                self.selected_node_counter[other_node] += 1
+                #self.selected_node_counter[chosen_node] += 1
+                #self.selected_node_counter[other_node] += 1
                 
                 for attr in attributes:
                     sum_attr = dg.nodes[chosen_node][attr] + dg.nodes[other_node][attr]
@@ -219,6 +239,9 @@ class GraphGenerator:
         print(f"{self.num_nodes} nodes and {self.G.number_of_edges()} edges generated for the initial static graph.")
         print(f"{self.num_dynamic_graphs} dynamic graphs generated.")
         #print("Selected node counts:", self.selected_node_counter)
+        #print("Edge selection count:")
+        #for edge, count in edge_selection_count.items():
+            #print(f"{edge}: {count}")
 
     # Write the data of the initial static graph to a JSON file
     def write_static_json(self):

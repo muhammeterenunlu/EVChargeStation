@@ -13,7 +13,7 @@ class GraphGenerator:
     def __init__(self):
         connected = False
         self.edge_creation_prob = 0.05
-        self.num_nodes = 20
+        self.num_nodes = 50
 
         while not connected:
             # Generate a random graph
@@ -315,7 +315,7 @@ class GraphGenerator:
         # Find the elbow point in the SSE curve
         kl = KneeLocator(k_candidates, sse, curve="convex", direction="decreasing")
         n_clusters = kl.elbow
-        print(f"Optimal number of clusters: {n_clusters}")
+        print(f"Number of cluster: {n_clusters}")
 
         # Apply K-Means clustering algorithm for utility (arrange n_init = 10 default value on MAC OS)
         kmeans_utility = KMeans(n_clusters, random_state=0, n_init=10).fit(X[:, [0]]) # Only consider the first column (utility) 

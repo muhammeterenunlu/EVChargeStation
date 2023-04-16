@@ -70,8 +70,8 @@ class NSGA2Optimizer:
 
 
         # Set parameters for the NSGA-II algorithm
-        population_size = 100
-        generations = 100
+        population_size = 50
+        generations = 200
         crossover_probability = 0.9
         mutation_probability = 0.1
 
@@ -79,13 +79,13 @@ class NSGA2Optimizer:
         pop = toolbox.population(n=population_size)
 
         # Run the NSGA-II algorithm
-        algorithms.eaMuPlusLambda(pop, toolbox, mu=population_size, lambda_=population_size, cxpb=crossover_probability, mutpb=mutation_probability, ngen=generations, verbose=False)
-
+        pop, _, gen_history = self.custom_eaMuPlusLambda(pop, toolbox, mu=population_size, lambda_=population_size, cxpb=crossover_probability, mutpb=mutation_probability, ngen=generations, verbose=False)
+        
         # Get the best solution
         best_solution = tools.selBest(pop, 1)[0]
 
         # Return the best solution found by NSGA-II
-        return best_solution
+        return best_solution, gen_history
         
     def visualize_charging_stations(self, utility_cost_data, best_solution):
         node_indices = np.arange(len(utility_cost_data))
@@ -118,6 +118,107 @@ class NSGA2Optimizer:
         with open(filename, 'w') as f:
             json.dump(best_solution_dict, f, indent=4)
 
+    def custom_eaMuPlusLambda(self, population, toolbox, mu, lambda_, cxpb, mutpb, ngen, stats=None, halloffame=None, verbose=__debug__):
+        logbook = tools.Logbook()
+        logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
+
+        # Evaluate the individuals with an invalid fitness
+        invalid_ind = [ind for ind in population if not ind.fitness.valid]
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+        for ind, fit in zip(invalid_ind, fitnesses):
+            ind.fitness.values = fit
+
+        if halloffame is not None:
+            halloffame.update(population)
+
+        record = stats.compile(population) if stats else {}
+        logbook.record(gen=0, nevals=len(invalid_ind), **record)
+        if verbose:
+            print(logbook.stream)
+
+        # Begin the generational process
+        gen_history = []
+        for gen in range(1, ngen + 1):
+            # Select the next generation individuals
+            offspring = toolbox.select(population, lambda_)
+
+            # Vary the pool of individuals
+            offspring = algorithms.varAnd(offspring, toolbox, cxpb, mutpb)
+
+            # Evaluate the individuals with an invalid fitness
+            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = fit
+
+            # Update the hall of fame with the generated individuals
+            if halloffame is not None:
+                halloffame.update(offspring)
+
+            # Replace the old population by the offspring
+            population[:mu] = offspring
+
+            # Append the current generation to gen_history
+            gen_info = {
+                'generation': gen,
+                'population': [ind[:] for ind in population],
+                'fitnesses': [ind.fitness.values for ind in population]
+            }
+            gen_history.append(gen_info)
+
+            # Update the statistics with the new population
+            record = stats.compile(population) if stats else {}
+            logbook.record(gen=gen, nevals=len(invalid_ind), **record)
+            if verbose:
+                print(logbook.stream)
+
+        return population, logbook, gen_history
+
+    def save_generation_history(self, gen_history, filename='generation_history.json'):
+        gen_history_dict = []
+        for gen_info in gen_history:
+            feasible_population = []
+            feasible_fitnesses = []
+            for ind, fitness in zip(gen_info['population'], gen_info['fitnesses']):
+                if fitness[0] != -1e9 and fitness[1] != -1e9:
+                    feasible_population.append(ind)
+                    feasible_fitnesses.append(fitness)
+            gen_history_dict.append({
+                'generation': gen_info['generation'],
+                'population': [" ".join(str(x) for x in ind) for ind in feasible_population],
+                'fitnesses': [list(fitness) for fitness in feasible_fitnesses]})
+        with open(filename, 'w') as f:
+            json.dump(gen_history_dict, f, indent=4)
+
+    def visualize_pareto_front(self, gen_history, best_solution):
+        # Get the last generation information
+        last_generation = gen_history[-1]
+
+        # Get the feasible solutions and their fitnesses from the last generation
+        feasible_population = []
+        feasible_fitnesses = []
+        best_solution_fitness = None
+        for ind, fitness in zip(last_generation['population'], last_generation['fitnesses']):
+            if fitness[0] != -1e9 and fitness[1] != -1e9:
+                feasible_population.append(ind)
+                feasible_fitnesses.append(fitness)
+                if ind == best_solution:
+                    best_solution_fitness = fitness
+
+        # Plot the feasible solutions
+        plt.figure()
+        plt.scatter(*zip(*feasible_fitnesses), marker='o', s=30, edgecolor='k')
+        
+        # Plot the best solution with a different color, for example, red
+        if best_solution_fitness is not None:
+            plt.scatter(best_solution_fitness[0], best_solution_fitness[1], marker='o', s=30, color='red', edgecolor='k')
+
+        plt.xlabel("Total Utility")
+        plt.ylabel("Total Cost")
+        plt.title("Pareto Front")
+        plt.savefig('pareto_front.png', bbox_inches='tight', dpi=300)
+        plt.show()
+
     def run_optimization(self, generate_graph):
         # Set the total number of charging stations that can be installed
         total_charging_stations = round(generate_graph.num_nodes * 10)
@@ -128,7 +229,13 @@ class NSGA2Optimizer:
         max_charging_stations = round((total_charging_stations / generate_graph.num_nodes) * 2)
         
         # Run NSGA-II
-        best_solution = self.optimize_charging_stations(generate_graph.utility_cost_data, generate_graph.num_nodes, total_charging_stations, min_charging_stations, max_charging_stations)
+        best_solution, gen_history = self.optimize_charging_stations(generate_graph.utility_cost_data, generate_graph.num_nodes, total_charging_stations, min_charging_stations, max_charging_stations)
+
+        # Visualize the Pareto front
+        self.visualize_pareto_front(gen_history, best_solution)
+
+        # Save the generation history to a file in JSON format
+        self.save_generation_history(gen_history)
 
         # Visualize the best solution found by NSGA-II
         self.visualize_charging_stations(generate_graph.utility_cost_data, best_solution)

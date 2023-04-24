@@ -14,8 +14,8 @@ def main():
     generate_graph.visualize_initial_static_graph()
     
     # Run optimization and visualization
-    optimize_graph = NSGA2Optimizer()
-    optimize_graph.run_optimization(generate_graph)
+    optimize_graph = NSGA2Optimizer(generate_graph)
+    optimize_graph.run_optimization()
     
 if __name__ == "__main__":
     main()

@@ -3,20 +3,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import json
+from collections.abc import Iterable
 from deap import base, creator, tools, algorithms
 
 class NSGA2Optimizer:
 
-    def __init__(self):
-        pass
+    # Add a global variable to store the crossover information
+    crossover_info = []
+
+    def __init__(self,graph_generator):
+        self.graph_generator = graph_generator
 
     def optimize_charging_stations(self, utility_cost_data, num_nodes, total_charging_stations, min_charging_stations, max_charging_stations):
         # Objective functions
         def total_utility(individual):
-            return sum(utility_cost_data[i]['Total Utility of 1 CS'] * individual[i] for i in range(num_nodes))
+            return sum(utility_cost_data[i]['Utility Specified By Using ML'] * individual[i] for i in range(num_nodes))
 
         def total_cost(individual):
-            return sum(utility_cost_data[i]['Total Cost of 1 CS'] * individual[i] for i in range(num_nodes))
+            return sum(utility_cost_data[i]['Cost Specified By Using ML'] * individual[i] for i in range(num_nodes))
 
         # Constraint function
         def total_charging_stations_constraint(individual):
@@ -49,13 +53,12 @@ class NSGA2Optimizer:
         def feasible(individual):
             return total_charging_stations_constraint(individual)
 
-        # Register 'mate' as a function that performs uniform crossover on two individuals with the specified probability of exchanging each attribute (indpb)
-        # In this case, the probability of exchanging each attribute between two individuals is 0.5 (50%)
-        toolbox.register("mate", tools.cxUniform, indpb=0.5)
+        # Register 'mate' as a function that performs graph crossover on two individuals
+        toolbox.register("mate", self.subgraph_crossover)
 
         # Register 'mutate' as a function that performs uniform integer mutation on an individual with the specified mutation range and probability of mutating each attribute (indpb)
         # In this case, the mutation range is between min_charging_stations and max_charging_stations, and the probability of mutating each attribute is 0.1 (10%)
-        toolbox.register("mutate", tools.mutUniformInt, low=min_charging_stations, up=max_charging_stations, indpb=0.1)
+        toolbox.register("mutate", tools.mutUniformInt, low=min_charging_stations, up=max_charging_stations, indpb=0)
 
         # Register 'select' as a function that performs selection using the NSGA-II algorithm
         toolbox.register("select", tools.selNSGA2)
@@ -70,10 +73,10 @@ class NSGA2Optimizer:
 
 
         # Set parameters for the NSGA-II algorithm
-        population_size = 50
+        population_size = 20
         generations = 200
         crossover_probability = 0.9
-        mutation_probability = 0.1
+        mutation_probability = 0
 
         # Initialize population
         pop = toolbox.population(n=population_size)
@@ -86,7 +89,35 @@ class NSGA2Optimizer:
 
         # Return the best solution found by NSGA-II
         return best_solution, gen_history
-        
+    
+    # Modify the subgraph_crossover function
+    def subgraph_crossover(self, ind1, ind2):
+        # Generate a connected subgraph from the main graph
+        subgraph, random_node = self.graph_generator.generate_connected_subgraph()
+
+        # Get the node indices from the subgraph
+        subgraph_nodes = list(subgraph.nodes)
+
+        # Swap the subgraph in the individuals
+        temp1 = ind1[:]
+        temp2 = ind2[:]
+        for node in subgraph_nodes:
+            ind1[node], ind2[node] = ind2[node], ind1[node]
+
+        # Update the global variable with the crossover information
+        crossover_info = self.crossover_info
+        crossover_info.append({
+            'parent1': temp1[:],
+            'parent2': temp2[:],
+            'offspring1': ind1[:],
+            'offspring2': ind2[:],
+            'subgraph_nodes': subgraph_nodes,
+            'selected_node': random_node
+        })
+
+        return ind1, ind2
+
+      
     def visualize_charging_stations(self, utility_cost_data, best_solution):
         node_indices = np.arange(len(utility_cost_data))
         charging_stations = [best_solution[i] for i in range(len(utility_cost_data))]
@@ -108,12 +139,12 @@ class NSGA2Optimizer:
         plt.savefig('charging_stations_distribution.png', bbox_inches='tight', dpi=300)
         plt.show()
 
-    def save_best_solution(self, generate_graph, best_solution, filename='best_solution.json'):
+    def save_best_solution(self, best_solution, filename='best_solution.json'):
         best_solution_dict = {
-            'Total Number of Installed Charging Stations': sum(best_solution),
-            'Total Utility': sum(generate_graph.utility_cost_data[i]['Total Utility of 1 CS'] * best_solution[i] for i in range(generate_graph.num_nodes)),
-            'Total Cost': int(sum(generate_graph.utility_cost_data[i]['Total Cost of 1 CS'] * best_solution[i] for i in range(generate_graph.num_nodes))),
-            'Charging Stations': {f'Node {i}': best_solution[i] for i in range(generate_graph.num_nodes)}
+             'Total Number of Installed Charging Stations': sum(best_solution),
+            'Total Utility': sum(self.graph_generator.utility_cost_data[i]['Total Utility of 1 CS'] * best_solution[i] for i in range(self.graph_generator.num_nodes)),
+            'Total Cost': int(sum(self.graph_generator.utility_cost_data[i]['Total Cost of 1 CS'] * best_solution[i] for i in range(self.graph_generator.num_nodes))),
+            'Charging Stations': {f'Node {i}': best_solution[i] for i in range(self.graph_generator.num_nodes)}
         }
         with open(filename, 'w') as f:
             json.dump(best_solution_dict, f, indent=4)
@@ -161,8 +192,8 @@ class NSGA2Optimizer:
             # Append the current generation to gen_history
             gen_info = {
                 'generation': gen,
-                'population': [ind[:] for ind in population],
-                'fitnesses': [ind.fitness.values for ind in population]
+                'population': [ind[:] for ind in offspring],  # Only include the offspring (selected individuals)
+                'fitnesses': [ind.fitness.values for ind in offspring]  # Only include the fitness values of the offspring
             }
             gen_history.append(gen_info)
 
@@ -173,6 +204,7 @@ class NSGA2Optimizer:
                 print(logbook.stream)
 
         return population, logbook, gen_history
+
 
     def save_generation_history(self, gen_history, filename='generation_history.json'):
         gen_history_dict = []
@@ -189,6 +221,46 @@ class NSGA2Optimizer:
                 'fitnesses': [list(fitness) for fitness in feasible_fitnesses]})
         with open(filename, 'w') as f:
             json.dump(gen_history_dict, f, indent=4)
+
+    def save_crossover_info(self):
+        # Write the crossover information to a JSON file
+        crossover_info = self.crossover_info
+        output_data = []
+
+        for idx, info in enumerate(crossover_info):
+            ind1 = info['parent1']
+            ind2 = info['parent2']
+            if isinstance(ind1, Iterable) and isinstance(ind2, Iterable):
+                before_changes_parent1 = [" ".join(str(x) for x in ind1)]
+                before_changes_parent2 = [" ".join(str(x) for x in ind2)]
+            else:
+                before_changes_parent1 = [ind1]
+                before_changes_parent2 = [ind2]
+
+            ind1 = info['offspring1']
+            ind2 = info['offspring2']
+            if isinstance(ind1, Iterable) and isinstance(ind2, Iterable):
+                after_changes_parent1 = [" ".join(str(x) for x in ind1)]
+                after_changes_parent2 = [" ".join(str(x) for x in ind2)]
+            else:
+                after_changes_parent1 = [ind1]
+                after_changes_parent2 = [ind2]
+
+            sorted_subgraph_nodes = sorted(info['subgraph_nodes'])
+            json_data = {
+                "Crossover": idx + 1,
+                "Parent 1": before_changes_parent1,
+                "Parent 2": before_changes_parent2,
+                "Offspring 1": after_changes_parent1,
+                "Offspring 2": after_changes_parent2,
+                "Subgraph Nodes": sorted_subgraph_nodes,
+                "Selected Random Node": info['selected_node']
+            }
+            output_data.append(json_data)
+
+        with open('crossover_info.json', 'w') as outfile:
+            json.dump(output_data, outfile, indent=4)
+
 
     def visualize_pareto_front(self, gen_history, best_solution):
         # Get the last generation information
@@ -219,17 +291,20 @@ class NSGA2Optimizer:
         plt.savefig('pareto_front.png', bbox_inches='tight', dpi=300)
         plt.show()
 
-    def run_optimization(self, generate_graph):
+    def run_optimization(self):
         # Set the total number of charging stations that can be installed
-        total_charging_stations = round(generate_graph.num_nodes * 10)
+        total_charging_stations = round(self.graph_generator.num_nodes * 10)
         print(f"Maximum number of charging stations that can be installed: {total_charging_stations}")
 
         # Set the minimum and maximum number of charging stations based on the total number of charging stations
-        min_charging_stations = 1
-        max_charging_stations = round((total_charging_stations / generate_graph.num_nodes) * 2)
+        min_charging_stations = 0
+        max_charging_stations = round((total_charging_stations / self.graph_generator.num_nodes) * 2)
         
         # Run NSGA-II
-        best_solution, gen_history = self.optimize_charging_stations(generate_graph.utility_cost_data, generate_graph.num_nodes, total_charging_stations, min_charging_stations, max_charging_stations)
+        best_solution, gen_history = self.optimize_charging_stations(self.graph_generator.utility_cost_data, self.graph_generator.num_nodes, total_charging_stations, min_charging_stations, max_charging_stations)
+
+        # Write the crossover information to a JSON file
+        self.save_crossover_info()
 
         # Visualize the Pareto front
         self.visualize_pareto_front(gen_history, best_solution)
@@ -238,9 +313,9 @@ class NSGA2Optimizer:
         self.save_generation_history(gen_history)
 
         # Visualize the best solution found by NSGA-II
-        self.visualize_charging_stations(generate_graph.utility_cost_data, best_solution)
+        self.visualize_charging_stations(self.graph_generator.utility_cost_data, best_solution)
 
         print(f"Total number of charging stations that are installed: {sum(best_solution)}")
 
         # Save the best solution to a file in JSON format
-        self.save_best_solution(generate_graph, best_solution)
+        self.save_best_solution(best_solution)

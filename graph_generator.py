@@ -13,7 +13,7 @@ class GraphGenerator:
     def __init__(self):
         connected = False
         self.edge_creation_prob = 0.05
-        self.num_nodes = 50
+        self.num_nodes = 20
 
         while not connected:
             # Generate a random graph
@@ -53,14 +53,11 @@ class GraphGenerator:
         for node in self.G.nodes:
             population = random.randint(50000, 100000)
             traffic = random.uniform(0, 1)
-            network = random.uniform(0, 1)
             traffic = traffic * population
-            network = network * population
             transportation_cost = random.randint(500, 1000)
             charge_station_cost = random.randint(5000, 10000)
             self.G.nodes[node]['population'] = population
             self.G.nodes[node]['traffic'] = traffic
-            self.G.nodes[node]['network'] = network
             self.G.nodes[node]['transportation cost'] = transportation_cost
             self.G.nodes[node]['charge station cost'] = charge_station_cost
             self.G.nodes[node]['total cost'] = transportation_cost + charge_station_cost
@@ -70,10 +67,8 @@ class GraphGenerator:
                  'Node': node, 
                  'Population': population, 
                  'Traffic': traffic, 
-                 'Network': network, 
                  'Population Change': 0, 
                  'Traffic Change': 0, 
-                 'Network Change': 0, 
                  'Transportation Cost of 1 CS': transportation_cost,
                  'Charge Station Cost of 1 CS': charge_station_cost,
                  'Total Cost of 1 CS': transportation_cost + charge_station_cost})
@@ -145,7 +140,6 @@ class GraphGenerator:
         previous_dg = None
         population_change = {}
         traffic_change = {}
-        network_change = {}
         # Create a dictionary to count how many times each node has been selected
         #self.selected_node_counter = {node: 0 for node in range(self.num_nodes)}
         edge_list = list(self.G.edges)
@@ -182,7 +176,7 @@ class GraphGenerator:
                 
                 transfer_amount = random.uniform(*transfer_range)
                     
-                attributes = ['traffic', 'network', 'population']
+                attributes = ['traffic', 'population']
                 
                 # Randomly choose one of the two nodes
                 chosen_node, other_node = random.choice([(u, v), (v, u)])
@@ -203,17 +197,15 @@ class GraphGenerator:
                 print("Error: KeyError occurred while trying to update node attributes.")
                 continue
 
-            # Calculate population, traffic and network changes for each node
+            # Calculate population, traffic changes for each node
             if previous_dg is None:
                 for node in dg.nodes:
                     population_change[node] = dg.nodes[node]['population'] - self.G.nodes[node]['population']
                     traffic_change[node] = dg.nodes[node]['traffic'] - self.G.nodes[node]['traffic']
-                    network_change[node] = dg.nodes[node]['network'] - self.G.nodes[node]['network']
             elif previous_dg is not None:
                 for node in dg.nodes:
                     population_change[node] = dg.nodes[node]['population'] - previous_dg.nodes[node]['population']
                     traffic_change[node] = dg.nodes[node]['traffic'] - previous_dg.nodes[node]['traffic']
-                    network_change[node] = dg.nodes[node]['network'] - previous_dg.nodes[node]['network']
 
             previous_dg = dg.copy()
 
@@ -221,7 +213,6 @@ class GraphGenerator:
             for node in dg.nodes:
                 population = dg.nodes[node]['population']
                 traffic = dg.nodes[node]['traffic']
-                network = dg.nodes[node]['network']
                 transportation_cost = dg.nodes[node]['transportation cost']
                 charge_station_cost = dg.nodes[node]['charge station cost']
                 self.dynamic_graphs_data.append({
@@ -229,10 +220,8 @@ class GraphGenerator:
                      'Node': node, 
                      'Population': population, 
                      'Traffic': traffic, 
-                     'Network': network, 
                      'Population Change': population_change[node], 
                      'Traffic Change': traffic_change[node], 
-                     'Network Change': network_change[node], 
                      'Transportation Cost of 1 CS': transportation_cost,
                      'Charge Station Cost of 1 CS': charge_station_cost,
                      'Total Cost of 1 CS': transportation_cost + charge_station_cost})
@@ -243,6 +232,21 @@ class GraphGenerator:
         #print("Edge selection count:")
         #for edge, count in edge_selection_count.items():
             #print(f"{edge}: {count}")
+    
+    # Generate a subgraph with a random node and all its connected nodes
+    def generate_connected_subgraph(self):
+        # Choose a random node from the initial static graph
+        random_node = random.choice(list(self.G.nodes))
+
+        # Get all the nodes connected to the chosen node
+        connected_nodes = list(self.G.neighbors(random_node))
+
+        # Create a subgraph with the connected nodes and the chosen node
+        subgraph_nodes = connected_nodes + [random_node]
+
+        subgraph = self.G.subgraph(subgraph_nodes)
+
+        return subgraph, random_node
 
     # Write the data of the initial static graph to a JSON file
     def write_static_json(self):
@@ -268,31 +272,25 @@ class GraphGenerator:
         for node in nodes:
             population_sum = 0
             traffic_sum = 0
-            network_sum = 0
             population_change_sum = 0
             traffic_change_sum = 0
-            network_change_sum = 0
             total_cost_sum = 0
             count = 0
             for datum in self.dynamic_graphs_data:
                 if datum['Node'] == node:
                     population_sum += datum['Population']
                     traffic_sum += datum['Traffic']
-                    network_sum += datum['Network']
                     population_change_sum += datum['Population Change']
                     traffic_change_sum += datum['Traffic Change']
-                    network_change_sum += datum['Network Change']
                     total_cost_sum += datum['Total Cost of 1 CS']
                     count += 1
             averaged_data.append({
                 'Node': node,
                 'Population': population_sum / count,
                 'Traffic': traffic_sum / count,
-                'Network': network_sum / count,
                 'Population_change': population_change_sum / count,
                 'Traffic_change': traffic_change_sum / count,
-                'Network_change': network_change_sum / count,
-                'Total Utility of 1 CS': int(0.25 * (0.3 * population_sum / count + 0.6 * traffic_sum / count + 0.1 * network_sum / count) + 0.75 * (0.3 * abs(population_change_sum) / count + 0.6 * abs(traffic_change_sum) / count + 0.1 * abs(network_change_sum) / count)),
+                'Total Utility of 1 CS': int(0.25 * (0.3 * population_sum / count + 0.7 * traffic_sum / count) + 0.75 * (0.3 * abs(population_change_sum) / count + 0.7 * abs(traffic_change_sum) / count / count)),
                 'Total Cost of 1 CS': int(total_cost_sum / count)})
 
         # Convert data to a 2D numpy array for clustering

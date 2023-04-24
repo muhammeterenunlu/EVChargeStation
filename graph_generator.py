@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.lines
 from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
 from kneed import KneeLocator
 
 class GraphGenerator:
@@ -13,7 +14,7 @@ class GraphGenerator:
     def __init__(self):
         connected = False
         self.edge_creation_prob = 0.05
-        self.num_nodes = 20
+        self.num_nodes = 50
 
         while not connected:
             # Generate a random graph
@@ -302,6 +303,10 @@ class GraphGenerator:
             for datum in averaged_data
         ])
 
+        # Feature scaling using StandardScaler
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+
         # Determine the optimal number of clusters using the Elbow Method
         sse = []
         k_candidates = range(1, round(self.num_nodes/2) + 1)
@@ -316,20 +321,32 @@ class GraphGenerator:
         print(f"Number of cluster: {n_clusters}")
 
         # Apply K-Means clustering algorithm for utility (arrange n_init = 10 default value on MAC OS)
-        kmeans_utility = KMeans(n_clusters, random_state=0, n_init=10).fit(X[:, [0]]) # Only consider the first column (utility) 
+        kmeans_utility = KMeans(n_clusters, random_state=0, n_init=10).fit(X_scaled[:, [0]])  # Only consider the first column (utility)
         utility_labels = kmeans_utility.labels_.tolist()
 
         # Apply K-Means clustering algorithm for cost
-        kmeans_cost = KMeans(n_clusters, random_state=0, n_init=10).fit(X[:, [1]])  # Only consider the second column (cost)
+        kmeans_cost = KMeans(n_clusters, random_state=0, n_init=10).fit(X_scaled[:, [1]])  # Only consider the second column (cost)
         cost_labels = kmeans_cost.labels_.tolist()
 
-        # Reverse the utility cluster labels so that higher labels have higher utility
-        max_utility_label = max(utility_labels)
-        utility_labels = [max_utility_label - label for label in utility_labels]
+        # Get the indices that would sort the utility cluster centers
+        sorted_utility_indices = np.argsort(kmeans_utility.cluster_centers_.flatten())
 
-        # Reverse the cost cluster labels so that higher label represents higher cost
-        max_cost_label = max(cost_labels)
-        cost_labels = [max_cost_label - label for label in cost_labels]
+        # Create a mapping of old labels to new labels for utility clusters
+        new_utility_labels = range(n_clusters)
+        utility_label_mapping = dict(zip(sorted_utility_indices, new_utility_labels))
+
+        # Update the utility labels using the mapping
+        utility_labels = [utility_label_mapping[label] for label in utility_labels]
+
+        # Get the indices that would sort the cost cluster centers
+        sorted_cost_indices = np.argsort(kmeans_cost.cluster_centers_.flatten())
+
+        # Create a mapping of old labels to new labels for cost clusters
+        new_cost_labels = range(n_clusters)
+        cost_label_mapping = dict(zip(sorted_cost_indices, new_cost_labels))
+
+        # Update the cost labels using the mapping
+        cost_labels = [cost_label_mapping[label] for label in cost_labels]
 
         # Add utility and cost cluster labels and total cost to the data
         for i, datum in enumerate(averaged_data):
@@ -339,7 +356,7 @@ class GraphGenerator:
                 'Cost Specified By Using ML': cost_labels[i] + 1,
                 'Total Utility of 1 CS': datum['Total Utility of 1 CS'],
                 'Total Cost of 1 CS': datum['Total Cost of 1 CS']})
-            
+
         # Write cluster data to a JSON file
         with open('utility_cost_data.json', 'w') as f:
             json.dump(self.utility_cost_data, f, indent=4)

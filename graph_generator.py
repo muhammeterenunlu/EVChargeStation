@@ -14,7 +14,7 @@ class GraphGenerator:
     def __init__(self):
         connected = False
         self.edge_creation_prob = 0.05
-        self.num_nodes = 50
+        self.num_nodes = 20
 
         while not connected:
             # Generate a random graph

@@ -14,21 +14,35 @@ class NSGA2Optimizer:
     def __init__(self,graph_generator):
         self.graph_generator = graph_generator
 
+    # This method sets up and runs the NSGA-II algorithm, defining objective functions, constraints, crossover, mutation, and selection functions. 
+    # It returns the best solution found and the generation history.
     def optimize_charging_stations(self, utility_cost_data, num_nodes, total_charging_stations, min_charging_stations, max_charging_stations):
         # Objective functions
+        # Calculates the total utility of an individual (a solution) based on the number of charging stations at each node and the utility data.
         def total_utility(individual):
-            return sum(utility_cost_data[i]['Utility Specified By Using ML'] * individual[i] for i in range(num_nodes))
+            total_utility_value = 0
+            for i in range(num_nodes):
+                utility_value = utility_cost_data[i]['Utility Specified By Using ML']
+                total_utility_value += utility_value * individual[i]
+            return total_utility_value
 
+        # Calculates the total cost of an individual (a solution) based on the number of charging stations at each node and the cost data.
         def total_cost(individual):
-            return sum(utility_cost_data[i]['Cost Specified By Using ML'] * individual[i] for i in range(num_nodes))
+            total_cost_value = 0
+            for i in range(num_nodes):
+                cost_value = utility_cost_data[i]['Cost Specified By Using ML']
+                total_cost_value += cost_value * individual[i]
+            return total_cost_value
 
-        # Constraint function
+        # Checks whether the total number of charging stations in an individual (a solution) does not exceed the specified limit.
         def total_charging_stations_constraint(individual):
             return sum(individual) <= total_charging_stations
 
-        # Create types
         # Indicate that the first objective (total utility) should be maximized (positive weight) while the second objective (total cost) should be minimized (negative weight).
+        # Inherited from the base.Fitness class
         creator.create("FitnessMultiObjective", base.Fitness, weights=(1.0, -1.0))
+
+        # Indicate that the individuals (solutions) should be represented as lists.
         creator.create("Individual", list, fitness=creator.FitnessMultiObjective)
 
         # Initialize a DEAP toolbox object that will store various components required for the NSGA-II algorithm
@@ -45,15 +59,15 @@ class NSGA2Optimizer:
         # The number of individuals in the population will be specified when the function is called
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-
         # Define evaluation and selection functions
         def evaluate(individual):
             return total_utility(individual), total_cost(individual)
 
+        # Define a function that checks whether an individual (a solution) satisfies the constraint that the total number of charging stations should not exceed the specified limit
         def feasible(individual):
             return total_charging_stations_constraint(individual)
 
-        # Register 'mate' as a function that performs graph crossover on two individuals
+        # Register 'mate'(crossover) as a function that performs graph crossover on two individuals
         toolbox.register("mate", self.subgraph_crossover)
 
         # Register 'mutate' as a function that performs uniform integer mutation on an individual with the specified mutation range and probability of mutating each attribute (indpb)
@@ -120,7 +134,9 @@ class NSGA2Optimizer:
       
     def visualize_charging_stations(self, utility_cost_data, best_solution):
         node_indices = np.arange(len(utility_cost_data))
-        charging_stations = [best_solution[i] for i in range(len(utility_cost_data))]
+        charging_stations = []
+        for i in range(len(utility_cost_data)):
+            charging_stations.append(best_solution[i])
 
         plt.bar(node_indices, charging_stations)
         plt.xlabel('Node Index')
@@ -132,7 +148,13 @@ class NSGA2Optimizer:
         ax.yaxis.set_major_locator(ticker.MultipleLocator(base=1))
 
         # Display x-tick labels every 5 nodes
-        x_tick_labels = ['' if i % 10 != 0 else str(i) for i in node_indices]
+        x_tick_labels = []
+        for i in node_indices:
+            if i % 10 != 0:
+                x_tick_labels.append('')
+            else:
+                x_tick_labels.append(str(i))
+
         plt.xticks(node_indices, x_tick_labels, fontsize=8, rotation=0)
 
         # Save the image
@@ -140,70 +162,107 @@ class NSGA2Optimizer:
         plt.show()
 
     def save_best_solution(self, best_solution, filename='best_solution.json'):
+        total_utility = 0
+        total_cost = 0
+        charging_stations = {}
+
+        for i in range(self.graph_generator.num_nodes):
+            total_utility += self.graph_generator.utility_cost_data[i]['Total Utility of 1 CS'] * best_solution[i]
+            total_cost += self.graph_generator.utility_cost_data[i]['Total Cost of 1 CS'] * best_solution[i]
+            charging_stations[f'Node {i}'] = best_solution[i]
+
+        total_installed_charging_stations = sum(best_solution)
+
         best_solution_dict = {
-             'Total Number of Installed Charging Stations': sum(best_solution),
-            'Total Utility': sum(self.graph_generator.utility_cost_data[i]['Total Utility of 1 CS'] * best_solution[i] for i in range(self.graph_generator.num_nodes)),
-            'Total Cost': int(sum(self.graph_generator.utility_cost_data[i]['Total Cost of 1 CS'] * best_solution[i] for i in range(self.graph_generator.num_nodes))),
-            'Charging Stations': {f'Node {i}': best_solution[i] for i in range(self.graph_generator.num_nodes)}
+            'Total Number of Installed Charging Stations': total_installed_charging_stations,
+            'Total Utility': total_utility,
+            'Total Cost': int(total_cost),
+            'Charging Stations': charging_stations
         }
         with open(filename, 'w') as f:
             json.dump(best_solution_dict, f, indent=4)
 
+    # Custom implementation of the (μ + λ) evolutionary algorithm.
     def custom_eaMuPlusLambda(self, population, toolbox, mu, lambda_, cxpb, mutpb, ngen, stats=None, halloffame=None, verbose=__debug__):
+        # Create a logbook to record statistics and information
         logbook = tools.Logbook()
-        logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
+        logbook.header = ['gen', 'nevals']
 
-        # Evaluate the individuals with an invalid fitness
-        invalid_ind = [ind for ind in population if not ind.fitness.valid]
+        if stats:
+            logbook.header.extend(stats.fields)
+
+        # Evaluate the fitness of individuals with invalid fitness values in the initial population
+        invalid_ind = []
+        for ind in population:
+            if not ind.fitness.valid:
+                invalid_ind.append(ind)
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 
+        # Update the hall of fame with the initial population
         if halloffame is not None:
             halloffame.update(population)
 
+        # Compile and record initial statistics
         record = stats.compile(population) if stats else {}
         logbook.record(gen=0, nevals=len(invalid_ind), **record)
         if verbose:
             print(logbook.stream)
 
-        # Begin the generational process
+        # Initialize the generation history list
         gen_history = []
+
+        # Main loop for the number of generations specified
         for gen in range(1, ngen + 1):
-            # Select the next generation individuals
+            # Select 'lambda_' individuals for the next generation
             offspring = toolbox.select(population, lambda_)
 
-            # Vary the pool of individuals
+            # Apply crossover and mutation operations to the selected offspring
             offspring = algorithms.varAnd(offspring, toolbox, cxpb, mutpb)
 
-            # Evaluate the individuals with an invalid fitness
-            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            # Evaluate the fitness of offspring with invalid fitness values
+            invalid_ind = []
+            for ind in offspring:
+                if not ind.fitness.valid:
+                    invalid_ind.append(ind)
+
             fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
             for ind, fit in zip(invalid_ind, fitnesses):
                 ind.fitness.values = fit
 
-            # Update the hall of fame with the generated individuals
+            # Update the hall of fame with the new offspring
             if halloffame is not None:
                 halloffame.update(offspring)
 
-            # Replace the old population by the offspring
+            # Replace the 'mu' worst individuals in the population with the offspring
             population[:mu] = offspring
 
-            # Append the current generation to gen_history
+            # Store the current generation's information in gen_history
+            population_copy = []
+            fitnesses_copy = []
+
+            for ind in offspring:
+                population_copy.append(ind[:])
+                fitnesses_copy.append(ind.fitness.values)
+
             gen_info = {
                 'generation': gen,
-                'population': [ind[:] for ind in offspring],  # Only include the offspring (selected individuals)
-                'fitnesses': [ind.fitness.values for ind in offspring]  # Only include the fitness values of the offspring
+                'population': population_copy,  # Store offspring individuals
+                'fitnesses': fitnesses_copy  # Store fitness values of offspring
             }
+
             gen_history.append(gen_info)
 
-            # Update the statistics with the new population
+            # Compile and record current generation statistics
             record = stats.compile(population) if stats else {}
             logbook.record(gen=gen, nevals=len(invalid_ind), **record)
             if verbose:
                 print(logbook.stream)
 
+        # Return the final population, logbook, and generation history
         return population, logbook, gen_history
+
 
 
     def save_generation_history(self, gen_history, filename='generation_history.json'):
@@ -215,10 +274,26 @@ class NSGA2Optimizer:
                 if fitness[0] != -1e9 and fitness[1] != -1e9:
                     feasible_population.append(ind)
                     feasible_fitnesses.append(fitness)
+            
+            population_strings = []
+            for ind in feasible_population:
+                ind_str_elements = []
+                for x in ind:
+                    ind_str_elements.append(str(x))
+                ind_str = " ".join(ind_str_elements)
+                population_strings.append(ind_str)
+
+            fitnesses_list = []
+            for fitness in feasible_fitnesses:
+                fitness_list = list(fitness)
+                fitnesses_list.append(fitness_list)
+
             gen_history_dict.append({
                 'generation': gen_info['generation'],
-                'population': [" ".join(str(x) for x in ind) for ind in feasible_population],
-                'fitnesses': [list(fitness) for fitness in feasible_fitnesses]})
+                'population': population_strings,
+                'fitnesses': fitnesses_list
+            })
+
         with open(filename, 'w') as f:
             json.dump(gen_history_dict, f, indent=4)
 
@@ -230,18 +305,20 @@ class NSGA2Optimizer:
         for idx, info in enumerate(crossover_info):
             ind1 = info['parent1']
             ind2 = info['parent2']
+            
             if isinstance(ind1, Iterable) and isinstance(ind2, Iterable):
-                before_changes_parent1 = [" ".join(str(x) for x in ind1)]
-                before_changes_parent2 = [" ".join(str(x) for x in ind2)]
+                before_changes_parent1 = [" ".join(map(str, ind1))]
+                before_changes_parent2 = [" ".join(map(str, ind2))]
             else:
                 before_changes_parent1 = [ind1]
                 before_changes_parent2 = [ind2]
 
             ind1 = info['offspring1']
             ind2 = info['offspring2']
+            
             if isinstance(ind1, Iterable) and isinstance(ind2, Iterable):
-                after_changes_parent1 = [" ".join(str(x) for x in ind1)]
-                after_changes_parent2 = [" ".join(str(x) for x in ind2)]
+                after_changes_parent1 = [" ".join(map(str, ind1))]
+                after_changes_parent2 = [" ".join(map(str, ind2))]
             else:
                 after_changes_parent1 = [ind1]
                 after_changes_parent2 = [ind2]
@@ -260,7 +337,6 @@ class NSGA2Optimizer:
 
         with open('crossover_info.json', 'w') as outfile:
             json.dump(output_data, outfile, indent=4)
-
 
     def visualize_pareto_front(self, gen_history, best_solution):
         # Get the last generation information

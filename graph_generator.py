@@ -285,6 +285,7 @@ class GraphGenerator:
                     traffic_change_sum += datum['Traffic Change']
                     total_cost_sum += datum['Total Cost of 1 CS']
                     count += 1
+
             averaged_data.append({
                 'Node': node,
                 'Population': population_sum / count,
@@ -294,11 +295,21 @@ class GraphGenerator:
                 'Total Utility of 1 CS': int(0.25 * (0.3 * population_sum / count + 0.7 * traffic_sum / count) + 0.75 * (0.3 * abs(population_change_sum) / count + 0.7 * abs(traffic_change_sum) / count / count)),
                 'Total Cost of 1 CS': int(total_cost_sum / count)})
 
+        # Normalize the 'Total Utility of 1 CS' and 'Total Cost of 1 CS' values
+        min_utility = min([datum['Total Utility of 1 CS'] for datum in averaged_data])
+        max_utility = max([datum['Total Utility of 1 CS'] for datum in averaged_data])
+        min_cost = min([datum['Total Cost of 1 CS'] for datum in averaged_data])
+        max_cost = max([datum['Total Cost of 1 CS'] for datum in averaged_data])
+
+        for datum in averaged_data:
+            datum['Total Utility of 1 CS Normalized'] = (datum['Total Utility of 1 CS'] - min_utility) / (max_utility - min_utility)
+            datum['Total Cost of 1 CS Normalized'] = (datum['Total Cost of 1 CS'] - min_cost) / (max_cost - min_cost)
+
         # Convert data to a 2D numpy array for clustering
         X = np.array([
             [
-                datum['Total Utility of 1 CS'],
-                datum['Total Cost of 1 CS']
+                datum['Total Utility of 1 CS Normalized'],
+                datum['Total Cost of 1 CS Normalized']
             ]
             for datum in averaged_data
         ])
@@ -355,7 +366,10 @@ class GraphGenerator:
                 'Utility Specified By Using ML': utility_labels[i] + 1,
                 'Cost Specified By Using ML': cost_labels[i] + 1,
                 'Total Utility of 1 CS': datum['Total Utility of 1 CS'],
-                'Total Cost of 1 CS': datum['Total Cost of 1 CS']})
+                'Total Cost of 1 CS': datum['Total Cost of 1 CS'],
+                'Total Utility of 1 CS Normalized': datum['Total Utility of 1 CS Normalized'],
+                'Total Cost of 1 CS Normalized': datum['Total Cost of 1 CS Normalized']
+            })
 
         # Write cluster data to a JSON file
         with open('utility_cost_data.json', 'w') as f:

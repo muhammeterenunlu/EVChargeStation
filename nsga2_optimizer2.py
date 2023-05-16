@@ -6,7 +6,7 @@ import json
 from collections.abc import Iterable
 from deap import base, creator, tools, algorithms
 
-class NSGA2Optimizer:
+class NSGA2Optimizer2:
 
     # Add a global variable to store the crossover information
     crossover_info = []
@@ -40,10 +40,14 @@ class NSGA2Optimizer:
 
         # Indicate that the first objective (total utility) should be maximized (positive weight) while the second objective (total cost) should be minimized (negative weight).
         # Inherited from the base.Fitness class
-        creator.create("FitnessMultiObjective", base.Fitness, weights=(1.0, -1.0))
+        # Check if the 'FitnessMultiObjective' class already exists before creating it
+        if not hasattr(creator, 'FitnessMultiObjective'):
+            creator.create("FitnessMultiObjective", base.Fitness, weights=(1.0, -1.0))
 
         # Indicate that the individuals (solutions) should be represented as lists.
-        creator.create("Individual", list, fitness=creator.FitnessMultiObjective)
+        # Check if the 'Individual' class already exists before creating it
+        if not hasattr(creator, 'Individual'):
+            creator.create("Individual", list, fitness=creator.FitnessMultiObjective)
 
         # Initialize a DEAP toolbox object that will store various components required for the NSGA-II algorithm
         toolbox = base.Toolbox()
@@ -104,20 +108,39 @@ class NSGA2Optimizer:
         # Return the best solution found by NSGA-II
         return best_solution, gen_history
     
-    # Modify the subgraph_crossover function
     def subgraph_crossover(self, ind1, ind2):
-        subgraph, random_node = self.graph_generator.get_connected_subgraph_and_random_node()
+        # Get 10 subgraphs from each parent
+        subgraphs_parent1 = [self.graph_generator.generate_connected_subgraph() for _ in range(10)]
+        subgraphs_parent2 = [self.graph_generator.generate_connected_subgraph() for _ in range(10)]
 
-        # Get the node indices from the subgraph
-        subgraph_nodes = list(subgraph.nodes)
+        # Combine subgraphs from both parents
+        all_subgraphs = subgraphs_parent1 + subgraphs_parent2
 
-        # Swap the subgraph in the individuals
+        # Determine the best subgraph based on total_utility/total_cost
+        def subgraph_score(subgraph):
+            total_utility = 0
+            total_cost = 0
+            for node in subgraph.nodes:
+                total_utility += self.graph_generator.utility_cost_data[node]['Utility Specified By Using ML']
+                total_cost += self.graph_generator.utility_cost_data[node]['Cost Specified By Using ML']
+            return total_utility / total_cost
+
+        best_subgraph = max(all_subgraphs, key=lambda subgraph: subgraph_score(subgraph[0]))
+
+        # Perform crossover using the best subgraph
+        subgraph_nodes = list(best_subgraph[0].nodes)
         temp1 = ind1[:]
         temp2 = ind2[:]
         for node in subgraph_nodes:
             ind1[node], ind2[node] = ind2[node], ind1[node]
 
-        # Update the global variable with the crossover information
+        # Determine the parent of the selected subgraph
+        selected_parent = None
+        if best_subgraph in subgraphs_parent1:
+            selected_parent = "Parent 1"
+        elif best_subgraph in subgraphs_parent2:
+            selected_parent = "Parent 2"
+
         crossover_info = self.crossover_info
         crossover_info.append({
             'parent1': temp1[:],
@@ -125,7 +148,8 @@ class NSGA2Optimizer:
             'offspring1': ind1[:],
             'offspring2': ind2[:],
             'subgraph_nodes': subgraph_nodes,
-            'selected_node': random_node
+            'selected_node': best_subgraph[1],
+            'selected_subgraph_parent': selected_parent
         })
 
         return ind1, ind2
@@ -157,7 +181,7 @@ class NSGA2Optimizer:
         plt.xticks(node_indices, x_tick_labels, fontsize=8, rotation=0)
 
         # Save the image
-        plt.savefig('crossover1_graph_figures_jsons/charging_stations_distribution.png', bbox_inches='tight', dpi=300)
+        plt.savefig('crossover2_graph_figures_jsons/charging_stations_distribution.png', bbox_inches='tight', dpi=300)
         plt.show()
 
     def save_best_solution(self, best_solution):
@@ -178,7 +202,7 @@ class NSGA2Optimizer:
             'Total Cost': int(total_cost),
             'Charging Stations': charging_stations
         }
-        with open('crossover1_graph_figures_jsons/best_solution.json', 'w') as f:
+        with open('crossover2_graph_figures_jsons/best_solution.json', 'w') as f:
             json.dump(best_solution_dict, f, indent=4)
 
     # Custom implementation of the (μ + λ) evolutionary algorithm.
@@ -262,8 +286,6 @@ class NSGA2Optimizer:
         # Return the final population, logbook, and generation history
         return population, logbook, gen_history
 
-
-
     def save_generation_history(self, gen_history):
         gen_history_dict = []
         for gen_info in gen_history:
@@ -293,7 +315,7 @@ class NSGA2Optimizer:
                 'fitnesses': fitnesses_list
             })
 
-        with open('crossover1_graph_figures_jsons/generation_history.json', 'w') as f:
+        with open('crossover2_graph_figures_jsons/generation_history.json', 'w') as f:
             json.dump(gen_history_dict, f, indent=4)
 
     def save_crossover_info(self):
@@ -330,11 +352,12 @@ class NSGA2Optimizer:
                 "Offspring 1": after_changes_parent1,
                 "Offspring 2": after_changes_parent2,
                 "Subgraph Nodes": sorted_subgraph_nodes,
-                "Selected Random Node": info['selected_node']
+                "Selected Random Node": info['selected_node'],
+                "Selected Subgraph Parent": info['selected_subgraph_parent']
             }
             output_data.append(json_data)
 
-        with open('crossover1_graph_figures_jsons/crossover_info.json', 'w') as outfile:
+        with open('crossover2_graph_figures_jsons/crossover_info.json', 'w') as outfile:
             json.dump(output_data, outfile, indent=4)
 
     def visualize_pareto_front(self, gen_history, best_solution):
@@ -370,7 +393,7 @@ class NSGA2Optimizer:
         plt.ylabel("Total Cost")
         plt.title("Pareto Front")
         plt.legend()
-        plt.savefig('crossover1_graph_figures_jsons/pareto_front.png', bbox_inches='tight', dpi=300)
+        plt.savefig('crossover2_graph_figures_jsons/pareto_front.png', bbox_inches='tight', dpi=300)
         plt.show()
 
     def run_optimization(self):

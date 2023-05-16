@@ -119,7 +119,7 @@ class GraphGenerator:
         plt.legend(handles=legend_elements, loc='lower right', fontsize='small', title='Edge Density')
 
         # Save the visualization to a file
-        plt.savefig('initial_static_graph.png', dpi=300)
+        plt.savefig('graph_figures_jsons/initial_static_graph.png', dpi=300)
         plt.show()
 
     def write_connected_nodes_json(self):
@@ -134,7 +134,7 @@ class GraphGenerator:
             connected_nodes[f'Node {edge[1]}'].append(edge[0])
 
         # Write the connected nodes data to a JSON file
-        with open('connected_nodes.json', 'w') as f:
+        with open('graph_figures_jsons/connected_nodes.json', 'w') as f:
             json.dump(connected_nodes, f, indent=4)
 
     def dynamic_graph_generator(self):
@@ -248,22 +248,26 @@ class GraphGenerator:
         subgraph = self.G.subgraph(subgraph_nodes)
 
         return subgraph, random_node
+    
+    def get_connected_subgraph_and_random_node(self):
+        subgraph, random_node = self.generate_connected_subgraph()
+        return subgraph, random_node
 
     # Write the data of the initial static graph to a JSON file
     def write_static_json(self):
-        with open('static_graph_data.json', 'w') as f:
+        with open('graph_figures_jsons/static_graph_data.json', 'w') as f:
             json.dump(self.static_graph_data, f, indent=4)
     
     # Write the data of the dynamic graphs to a JSON file
     def write_dynamics_json(self):
-        with open('dynamic_graphs_data.json', 'w') as f:
+        with open('graph_figures_jsons/dynamic_graphs_data.json', 'w') as f:
             json.dump(self.dynamic_graphs_data, f, indent=4)
 
     # K-means clustering. Each cluster represents utility of a charge station.
     def kmeans_clustering(self):
         averaged_data = []
         # Load JSON data 
-        with open('dynamic_graphs_data.json') as f:
+        with open('graph_figures_jsons/dynamic_graphs_data.json') as f:
             self.dynamic_graphs_data = json.load(f)
 
         # Get the set of nodes
@@ -372,5 +376,5 @@ class GraphGenerator:
             })
 
         # Write cluster data to a JSON file
-        with open('utility_cost_data.json', 'w') as f:
+        with open('graph_figures_jsons/utility_cost_data.json', 'w') as f:
             json.dump(self.utility_cost_data, f, indent=4)

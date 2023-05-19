@@ -1,10 +1,12 @@
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 import json
 from collections.abc import Iterable
 from deap import base, creator, tools, algorithms
+from deap.tools._hypervolume import hv
+from deap.tools.emo import assignCrowdingDist
+from population_generator import generate_population
 
 class NSGA2Optimizer:
 
@@ -17,6 +19,7 @@ class NSGA2Optimizer:
     # This method sets up and runs the NSGA-II algorithm, defining objective functions, constraints, crossover, mutation, and selection functions. 
     # It returns the best solution found and the generation history.
     def optimize_charging_stations(self, utility_cost_data, num_nodes, total_charging_stations, min_charging_stations, max_charging_stations):
+        self.total_charging_stations = total_charging_stations
         # Objective functions
         # Calculates the total utility of an individual (a solution) based on the number of charging stations at each node and the utility data.
         def total_utility(individual):
@@ -34,30 +37,8 @@ class NSGA2Optimizer:
                 total_cost_value += cost_value * individual[i]
             return total_cost_value
 
-        # Checks whether the total number of charging stations in an individual (a solution) does not exceed the specified limit.
-        def total_charging_stations_constraint(individual):
-            return sum(individual) <= total_charging_stations
-
-        # Indicate that the first objective (total utility) should be maximized (positive weight) while the second objective (total cost) should be minimized (negative weight).
-        # Inherited from the base.Fitness class
-        creator.create("FitnessMultiObjective", base.Fitness, weights=(1.0, -1.0))
-
-        # Indicate that the individuals (solutions) should be represented as lists.
-        creator.create("Individual", list, fitness=creator.FitnessMultiObjective)
-
         # Initialize a DEAP toolbox object that will store various components required for the NSGA-II algorithm
         toolbox = base.Toolbox()
-
-        # Register 'attr_int' as an integer attribute generator that generates random integers between min_charging_stations and max_charging_stations
-        toolbox.register("attr_int", random.randint, min_charging_stations, max_charging_stations)
-
-        # Register 'individual' as a function that creates an individual (solution) by repeatedly calling the 'attr_int' function num_nodes times
-        # The resulting individual is a list of integers representing the number of charging stations at each node
-        toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_int, num_nodes)
-
-        # Register 'population' as a function that creates a list of individuals (a population) by repeatedly calling the 'individual' function
-        # The number of individuals in the population will be specified when the function is called
-        toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
         # Define evaluation and selection functions
         def evaluate(individual):
@@ -65,14 +46,15 @@ class NSGA2Optimizer:
 
         # Define a function that checks whether an individual (a solution) satisfies the constraint that the total number of charging stations should not exceed the specified limit
         def feasible(individual):
-            return total_charging_stations_constraint(individual)
+            self.reduce_excess_charging_stations(individual)
+            return True
 
         # Register 'mate'(crossover) as a function that performs graph crossover on two individuals
         toolbox.register("mate", self.subgraph_crossover)
 
         # Register 'mutate' as a function that performs uniform integer mutation on an individual with the specified mutation range and probability of mutating each attribute (indpb)
         # In this case, the mutation range is between min_charging_stations and max_charging_stations, and the probability of mutating each attribute is 0.1 (10%)
-        toolbox.register("mutate", tools.mutUniformInt, low=min_charging_stations, up=max_charging_stations, indpb=0)
+        toolbox.register("mutate", tools.mutUniformInt, low=min_charging_stations, up=max_charging_stations, indpb=0.1)
 
         # Register 'select' as a function that performs selection using the NSGA-II algorithm
         toolbox.register("select", tools.selNSGA2)
@@ -85,24 +67,17 @@ class NSGA2Optimizer:
         # In this case, a large penalty of (-1e9, -1e9) is applied to both objective values if the constraint is not satisfied
         toolbox.decorate("evaluate", tools.DeltaPenalty(feasible, (-1e9, -1e9)))
 
-
         # Set parameters for the NSGA-II algorithm
         population_size = 100
         generations = 100
         crossover_probability = 0.9
-        mutation_probability = 0
+        mutation_probability = 0.1
 
-        # Initialize population
-        pop = toolbox.population(n=population_size)
+        pop = generate_population(num_nodes, min_charging_stations, max_charging_stations, population_size)  # Use the same seed
 
-        # Run the NSGA-II algorithm
         pop, _, gen_history = self.custom_eaMuPlusLambda(pop, toolbox, mu=population_size, lambda_=population_size, cxpb=crossover_probability, mutpb=mutation_probability, ngen=generations, verbose=False)
         
-        # Get the best solution
-        best_solution = tools.selBest(pop, 1)[0]
-
-        # Return the best solution found by NSGA-II
-        return best_solution, gen_history
+        return gen_history
     
     # Modify the subgraph_crossover function
     def subgraph_crossover(self, ind1, ind2):
@@ -130,67 +105,11 @@ class NSGA2Optimizer:
 
         return ind1, ind2
 
-      
-    def visualize_charging_stations(self, utility_cost_data, best_solution):
-        node_indices = np.arange(len(utility_cost_data))
-        charging_stations = []
-        for i in range(len(utility_cost_data)):
-            charging_stations.append(best_solution[i])
-
-        plt.bar(node_indices, charging_stations)
-        plt.xlabel('Node Index')
-        plt.ylabel('Number of Charging Stations')
-        plt.title('Charging Stations Distribution')
-        
-        # Set y-axis labels as integers
-        ax = plt.gca()
-        ax.yaxis.set_major_locator(ticker.MultipleLocator(base=1))
-
-        # Display x-tick labels every 5 nodes
-        x_tick_labels = []
-        for i in node_indices:
-            if i % 10 != 0:
-                x_tick_labels.append('')
-            else:
-                x_tick_labels.append(str(i))
-
-        plt.xticks(node_indices, x_tick_labels, fontsize=8, rotation=0)
-
-        # Save the image
-        plt.savefig('crossover1_graph_figures_jsons/charging_stations_distribution.png', bbox_inches='tight', dpi=300)
-        plt.show()
-
-    def save_best_solution(self, best_solution):
-        total_utility = 0
-        total_cost = 0
-        charging_stations = {}
-
-        for i in range(self.graph_generator.num_nodes):
-            total_utility += self.graph_generator.utility_cost_data[i]['Total Utility of 1 CS'] * best_solution[i]
-            total_cost += self.graph_generator.utility_cost_data[i]['Total Cost of 1 CS'] * best_solution[i]
-            charging_stations[f'Node {i}'] = best_solution[i]
-
-        total_installed_charging_stations = sum(best_solution)
-
-        best_solution_dict = {
-            'Total Number of Installed Charging Stations': total_installed_charging_stations,
-            'Total Utility': total_utility,
-            'Total Cost': int(total_cost),
-            'Charging Stations': charging_stations
-        }
-        with open('crossover1_graph_figures_jsons/best_solution.json', 'w') as f:
-            json.dump(best_solution_dict, f, indent=4)
-
-    # Custom implementation of the (μ + λ) evolutionary algorithm.
     def custom_eaMuPlusLambda(self, population, toolbox, mu, lambda_, cxpb, mutpb, ngen, stats=None, halloffame=None, verbose=__debug__):
-        # Create a logbook to record statistics and information
         logbook = tools.Logbook()
         logbook.header = ['gen', 'nevals']
-
         if stats:
             logbook.header.extend(stats.fields)
-
-        # Evaluate the fitness of individuals with invalid fitness values in the initial population
         invalid_ind = []
         for ind in population:
             if not ind.fitness.valid:
@@ -198,70 +117,44 @@ class NSGA2Optimizer:
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
-
-        # Update the hall of fame with the initial population
         if halloffame is not None:
             halloffame.update(population)
-
-        # Compile and record initial statistics
         record = stats.compile(population) if stats else {}
         logbook.record(gen=0, nevals=len(invalid_ind), **record)
         if verbose:
             print(logbook.stream)
-
-        # Initialize the generation history list
         gen_history = []
-
-        # Main loop for the number of generations specified
         for gen in range(1, ngen + 1):
-            # Select 'lambda_' individuals for the next generation
             offspring = toolbox.select(population, lambda_)
-
-            # Apply crossover and mutation operations to the selected offspring
             offspring = algorithms.varAnd(offspring, toolbox, cxpb, mutpb)
-
-            # Evaluate the fitness of offspring with invalid fitness values
+            population = population + offspring  # Combine parents and offspring
             invalid_ind = []
-            for ind in offspring:
+            for ind in population:
                 if not ind.fitness.valid:
                     invalid_ind.append(ind)
-
             fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
             for ind, fit in zip(invalid_ind, fitnesses):
                 ind.fitness.values = fit
-
-            # Update the hall of fame with the new offspring
             if halloffame is not None:
-                halloffame.update(offspring)
-
-            # Replace the 'mu' worst individuals in the population with the offspring
-            population[:mu] = offspring
-
-            # Store the current generation's information in gen_history
+                halloffame.update(population)
+            population = toolbox.select(population, mu)  # Select the best individuals based on dominance
+            assignCrowdingDist(population)  # Assign crowding distances
             population_copy = []
             fitnesses_copy = []
-
-            for ind in offspring:
+            for ind in population:
                 population_copy.append(ind[:])
                 fitnesses_copy.append(ind.fitness.values)
-
             gen_info = {
                 'generation': gen,
-                'population': population_copy,  # Store offspring individuals
-                'fitnesses': fitnesses_copy  # Store fitness values of offspring
+                'population': population_copy,  # Store the selected individuals
+                'fitnesses': fitnesses_copy  # Store fitness values of selected individuals
             }
-
             gen_history.append(gen_info)
-
-            # Compile and record current generation statistics
             record = stats.compile(population) if stats else {}
             logbook.record(gen=gen, nevals=len(invalid_ind), **record)
             if verbose:
                 print(logbook.stream)
-
-        # Return the final population, logbook, and generation history
         return population, logbook, gen_history
-
 
 
     def save_generation_history(self, gen_history):
@@ -337,19 +230,16 @@ class NSGA2Optimizer:
         with open('crossover1_graph_figures_jsons/crossover_info.json', 'w') as outfile:
             json.dump(output_data, outfile, indent=4)
 
-    def visualize_pareto_front(self, gen_history, best_solution):
+    def visualize_pareto_front(self, gen_history):
         last_generation = gen_history[-1]
         feasible_population = []
         feasible_fitnesses = []
-        best_solution_fitness = None
         for ind, fitness in zip(last_generation['population'], last_generation['fitnesses']):
             if fitness[0] != -1e9 and fitness[1] != -1e9:
                 ind_with_fitness = creator.Individual(ind)  # Create an Individual object
                 ind_with_fitness.fitness.values = fitness  # Set the fitness attribute
                 feasible_population.append(ind_with_fitness)  # Append the Individual to the feasible_population
                 feasible_fitnesses.append(fitness)
-                if ind == best_solution:
-                    best_solution_fitness = fitness
 
         # Calculate Pareto front
         pareto_front = tools.sortNondominated(feasible_population, len(feasible_population))[0]
@@ -360,11 +250,11 @@ class NSGA2Optimizer:
         non_dominated = [fit for fit in feasible_fitnesses if fit in pareto_front_fitnesses]
 
         plt.figure()
-        plt.scatter(*zip(*dominated), marker='o', s=30, edgecolor='k', color='gray', label='Dominated solutions')
+
+        if dominated:
+            plt.scatter(*zip(*dominated), marker='o', s=30, edgecolor='k', color='gray', label='Dominated solutions')
+
         plt.scatter(*zip(*non_dominated), marker='o', s=30, edgecolor='k', color='blue', label='Non-dominated solutions')
-        
-        if best_solution_fitness is not None:
-            plt.scatter(best_solution_fitness[0], best_solution_fitness[1], marker='o', s=30, color='red', edgecolor='k', label='Best solution')
 
         plt.xlabel("Total Utility")
         plt.ylabel("Total Cost")
@@ -373,31 +263,68 @@ class NSGA2Optimizer:
         plt.savefig('crossover1_graph_figures_jsons/pareto_front.png', bbox_inches='tight', dpi=300)
         plt.show()
 
+    def calculate_hypervolume(self, front, reference_point):
+        # Convert the front and the reference point to NumPy arrays
+        front = np.array(front)
+        reference_point = np.array(reference_point)
+        # Compute and return the hypervolume
+        hypervolume = hv.hypervolume(front, reference_point)
+        print(f'Hypervolume: {hypervolume}') # Print statement for debugging
+        return hypervolume
+
+    def get_overall_reference_point(self, gen_history):
+        all_costs = []
+        all_utilities = []
+        for gen_info in gen_history:
+            front = gen_info['fitnesses']
+            all_costs.extend([ind[1] for ind in front])
+            all_utilities.extend([ind[0] for ind in front])
+        max_costs = max(all_costs)
+        min_utility = min(all_utilities)
+        return [max_costs, min_utility]  # Overall reference point across all generations
+
+    def add_hypervolume_to_history(self, gen_history):
+        reference_point = self.get_overall_reference_point(gen_history)
+        print(f'Reference point: {reference_point}') # Print statement for debugging
+        for gen_info in gen_history:
+            front = gen_info['fitnesses']
+            # Calculate and store the hypervolume using the overall reference point
+            self.calculate_hypervolume(front, reference_point)
+
+    # add a new function for reducing excess charging stations based on utility/cost ratio
+    def reduce_excess_charging_stations(self, individual):
+        while sum(individual) > self.total_charging_stations:
+            min_ratio = float('inf')
+            min_node = None
+            for i in range(self.graph_generator.num_nodes):
+                if individual[i] > 0:
+                    ratio = self.graph_generator.utility_cost_data[i]['Utility Specified By Using ML'] / self.graph_generator.utility_cost_data[i]['Cost Specified By Using ML']
+                    if ratio < min_ratio:
+                        min_ratio = ratio
+                        min_node = i
+            if min_node is not None:
+                individual[min_node] -= 1
+
     def run_optimization(self):
         # Set the total number of charging stations that can be installed
         total_charging_stations = round(self.graph_generator.num_nodes * 10)
         print(f"Maximum number of charging stations that can be installed: {total_charging_stations}")
-
+        
         # Set the minimum and maximum number of charging stations based on the total number of charging stations
         min_charging_stations = 0
         max_charging_stations = round((total_charging_stations / self.graph_generator.num_nodes) * 2)
         
         # Run NSGA-II
-        best_solution, gen_history = self.optimize_charging_stations(self.graph_generator.utility_cost_data, self.graph_generator.num_nodes, total_charging_stations, min_charging_stations, max_charging_stations)
+        gen_history = self.optimize_charging_stations(self.graph_generator.utility_cost_data, self.graph_generator.num_nodes, total_charging_stations, min_charging_stations, max_charging_stations)
+        
+        # Add hypervolume
+        self.add_hypervolume_to_history(gen_history)
 
         # Write the crossover information to a JSON file
         self.save_crossover_info()
-
+        
         # Visualize the Pareto front
-        self.visualize_pareto_front(gen_history, best_solution)
-
+        self.visualize_pareto_front(gen_history)
+        
         # Save the generation history to a file in JSON format
         self.save_generation_history(gen_history)
-
-        # Visualize the best solution found by NSGA-II
-        self.visualize_charging_stations(self.graph_generator.utility_cost_data, best_solution)
-
-        print(f"Total number of charging stations that are installed: {sum(best_solution)}")
-
-        # Save the best solution to a file in JSON format
-        self.save_best_solution(best_solution)

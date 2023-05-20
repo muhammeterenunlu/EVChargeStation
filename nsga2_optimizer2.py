@@ -15,7 +15,7 @@ class NSGA2Optimizer2:
 
     def __init__(self,graph_generator):
         self.graph_generator = graph_generator
-        #self.gen_history = []
+        self.gen_history = []
 
     # This method sets up and runs the NSGA-II algorithm, defining objective functions, constraints, crossover, mutation, and selection functions. 
     # It returns the best solution found and the generation history.
@@ -69,8 +69,8 @@ class NSGA2Optimizer2:
         toolbox.decorate("evaluate", tools.DeltaPenalty(feasible, (-1e9, -1e9)))
 
         # Set parameters for the NSGA-II algorithm
-        population_size = 100
-        generations = 100
+        population_size = 200
+        generations = 200
         crossover_probability = 0.9
         mutation_probability = 0.1
 
@@ -78,7 +78,7 @@ class NSGA2Optimizer2:
 
         pop, _, gen_history = self.custom_eaMuPlusLambda(pop, toolbox, mu=population_size, lambda_=population_size, cxpb=crossover_probability, mutpb=mutation_probability, ngen=generations, verbose=False)
         
-        #self.gen_history = gen_history  # Set self.gen_history here
+        self.gen_history = gen_history  # Set self.gen_history here
 
         return gen_history
     
@@ -299,7 +299,7 @@ class NSGA2Optimizer2:
         plt.savefig('crossover2_graph_figures_jsons/pareto_front.png', bbox_inches='tight', dpi=300)
         plt.show()
 
-    
+    """
     def calculate_hypervolume(self, front, reference_point):
         # Convert the front and the reference point to NumPy arrays
         front = np.array(front)
@@ -327,7 +327,7 @@ class NSGA2Optimizer2:
             front = gen_info['fitnesses']
             # Calculate and store the hypervolume using the overall reference point
             self.calculate_hypervolume(front, reference_point)
-    
+    """
     # add a new function for reducing excess charging stations based on utility/cost ratio
     def reduce_excess_charging_stations(self, individual):
         while sum(individual) > self.total_charging_stations:
@@ -345,7 +345,7 @@ class NSGA2Optimizer2:
     def run_optimization(self):
         # Set the total number of charging stations that can be installed
         total_charging_stations = round(self.graph_generator.num_nodes * 10)
-        print(f"Maximum number of charging stations that can be installed: {total_charging_stations}")
+        print(f"Maximum number of charging stations that can be installed (Crossover Strategy 2): {total_charging_stations}")
         
         # Set the minimum and maximum number of charging stations based on the total number of charging stations
         min_charging_stations = 0
@@ -355,7 +355,7 @@ class NSGA2Optimizer2:
         gen_history = self.optimize_charging_stations(self.graph_generator.utility_cost_data, self.graph_generator.num_nodes, total_charging_stations, min_charging_stations, max_charging_stations)
         
         # Add hypervolume
-        self.add_hypervolume_to_history(gen_history)
+        #self.add_hypervolume_to_history(gen_history)
 
         # Write the crossover information to a JSON file
         self.save_crossover_info()

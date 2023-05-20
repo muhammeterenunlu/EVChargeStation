@@ -1,8 +1,9 @@
+import os
+import json
 from graph_generator import GraphGenerator
 from nsga2_optimizer import NSGA2Optimizer
 from nsga2_optimizer2 import NSGA2Optimizer2
-import os
-#from hypervolume_calculator import add_hypervolume_to_history
+from hypervolume_calculator import add_hypervolume_to_history
 
 def main():
     # Create figures folder if not exists
@@ -14,6 +15,9 @@ def main():
     # Create figures3 folder if not exists
     if not os.path.exists("crossover2_graph_figures_jsons"):
         os.makedirs("crossover2_graph_figures_jsons")
+    # Create hypervolume folder if not exists
+    if not os.path.exists("hypervolumes_json"):
+        os.makedirs("hypervolumes_json")
     # Generate the initial static graph and the dynamic graphs
     print("Please wait for the process. Graphs are being created...")
     generate_graph = GraphGenerator()
@@ -34,9 +38,19 @@ def main():
     optimize_graph2.run_optimization()
 
     # Calculate hypervolumes
-    #hypervolume1, hypervolume2 = add_hypervolume_to_history(optimize_graph2.gen_history, optimize_graph.gen_history)
-    #print("Hypervolume for NSGA2Optimizer2: ", hypervolume1)
-    #print("Hypervolume for NSGA2Optimizer: ", hypervolume2)
+    hypervolume1, hypervolume2 = add_hypervolume_to_history(optimize_graph2.gen_history, optimize_graph.gen_history)
+
+    # Save hypervolumes as json
+    hypervolumes = {
+        "NSGA2Optimizer": hypervolume1,
+        "NSGA2Optimizer2": hypervolume2
+    }
+
+    with open("hypervolumes_json/hypervolumes.json", 'w') as f:
+            json.dump(hypervolumes, f, indent=4)
+
+    print("Last generation hypervolume for NSGA2Optimizer: ", hypervolume1[-1])
+    print("Last generation hypervolume for NSGA2Optimizer2: ", hypervolume2[-1])
     
 if __name__ == "__main__":
     main()

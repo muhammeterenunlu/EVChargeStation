@@ -1,7 +1,7 @@
 from deap.tools._hypervolume import hv
 import numpy as np
 
-def get_overall_reference_point(gen_histories):
+def get_overall_reference_point(gen_histories, buffer=2):
     all_costs = []
     all_utilities = []
     for gen_history in gen_histories:
@@ -9,8 +9,8 @@ def get_overall_reference_point(gen_histories):
             front = gen_info['fitnesses']
             all_costs.extend([ind[1] for ind in front])
             all_utilities.extend([ind[0] for ind in front])
-    max_costs = max(all_costs)
-    min_utility = min(all_utilities)
+    max_costs = max(all_costs) * buffer
+    min_utility = min(all_utilities) * buffer
     return [max_costs, min_utility]
 
 def calculate_hypervolume(front, reference_point):
@@ -19,8 +19,8 @@ def calculate_hypervolume(front, reference_point):
     hypervolume = hv.hypervolume(front, reference_point)
     return hypervolume
 
-def add_hypervolume_to_history(gen_history2, gen_history1):
-    reference_point = get_overall_reference_point([gen_history2, gen_history1])
+def add_hypervolume_to_history(gen_history2, gen_history1, buffer=2):
+    reference_point = get_overall_reference_point([gen_history2, gen_history1], buffer)
     print("Reference point: ", reference_point)
     hypervolume2 = []
     hypervolume1 = []

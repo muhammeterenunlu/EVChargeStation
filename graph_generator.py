@@ -14,7 +14,7 @@ class GraphGenerator:
     def __init__(self):
         connected = False
         self.edge_creation_prob = 0.05
-        self.num_nodes = 20
+        self.num_nodes = 50
 
         while not connected:
             # Generate a random graph
@@ -119,7 +119,8 @@ class GraphGenerator:
         plt.legend(handles=legend_elements, loc='lower right', fontsize='small', title='Edge Density')
 
         # Save the visualization to a file
-        plt.savefig('graph_figures_jsons/initial_static_graph.png', dpi=300)
+        plt.savefig('graph_figures_jsons/initial_static_graph.png', dpi=300)   
+
         plt.show()
 
     def write_connected_nodes_json(self):

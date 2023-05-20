@@ -2,6 +2,7 @@ from graph_generator import GraphGenerator
 from nsga2_optimizer import NSGA2Optimizer
 from nsga2_optimizer2 import NSGA2Optimizer2
 import os
+#from hypervolume_calculator import add_hypervolume_to_history
 
 def main():
     # Create figures folder if not exists
@@ -31,6 +32,11 @@ def main():
     # Run optimization and visualization for crossover 2 (own)
     optimize_graph2 = NSGA2Optimizer2(generate_graph)
     optimize_graph2.run_optimization()
+
+    # Calculate hypervolumes
+    #hypervolume1, hypervolume2 = add_hypervolume_to_history(optimize_graph2.gen_history, optimize_graph.gen_history)
+    #print("Hypervolume for NSGA2Optimizer2: ", hypervolume1)
+    #print("Hypervolume for NSGA2Optimizer: ", hypervolume2)
     
 if __name__ == "__main__":
     main()

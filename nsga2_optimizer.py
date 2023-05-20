@@ -15,6 +15,7 @@ class NSGA2Optimizer:
 
     def __init__(self,graph_generator):
         self.graph_generator = graph_generator
+        #self.gen_history = []
 
     # This method sets up and runs the NSGA-II algorithm, defining objective functions, constraints, crossover, mutation, and selection functions. 
     # It returns the best solution found and the generation history.
@@ -77,6 +78,8 @@ class NSGA2Optimizer:
 
         pop, _, gen_history = self.custom_eaMuPlusLambda(pop, toolbox, mu=population_size, lambda_=population_size, cxpb=crossover_probability, mutpb=mutation_probability, ngen=generations, verbose=False)
         
+        #self.gen_history = gen_history  # Set self.gen_history here
+
         return gen_history
     
     # Modify the subgraph_crossover function
@@ -262,7 +265,7 @@ class NSGA2Optimizer:
         plt.legend()
         plt.savefig('crossover1_graph_figures_jsons/pareto_front.png', bbox_inches='tight', dpi=300)
         plt.show()
-
+    
     def calculate_hypervolume(self, front, reference_point):
         # Convert the front and the reference point to NumPy arrays
         front = np.array(front)
@@ -281,7 +284,7 @@ class NSGA2Optimizer:
             all_utilities.extend([ind[0] for ind in front])
         max_costs = max(all_costs)
         min_utility = min(all_utilities)
-        return [max_costs, min_utility]  # Overall reference point across all generations
+        return [1000, 250]  # Overall reference point across all generations
 
     def add_hypervolume_to_history(self, gen_history):
         reference_point = self.get_overall_reference_point(gen_history)
@@ -290,7 +293,7 @@ class NSGA2Optimizer:
             front = gen_info['fitnesses']
             # Calculate and store the hypervolume using the overall reference point
             self.calculate_hypervolume(front, reference_point)
-
+    
     # add a new function for reducing excess charging stations based on utility/cost ratio
     def reduce_excess_charging_stations(self, individual):
         while sum(individual) > self.total_charging_stations:

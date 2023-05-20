@@ -12,7 +12,9 @@ def generate_population(num_nodes, min_charging_stations, max_charging_stations,
     toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_int, num_nodes)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     pop = toolbox.population(n=population_size)
+    """ For debugging
     print("Population generated")
     # print population
     print(pop)
+    """
     return pop

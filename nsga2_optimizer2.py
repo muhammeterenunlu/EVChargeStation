@@ -15,6 +15,7 @@ class NSGA2Optimizer2:
 
     def __init__(self,graph_generator):
         self.graph_generator = graph_generator
+        #self.gen_history = []
 
     # This method sets up and runs the NSGA-II algorithm, defining objective functions, constraints, crossover, mutation, and selection functions. 
     # It returns the best solution found and the generation history.
@@ -77,17 +78,14 @@ class NSGA2Optimizer2:
 
         pop, _, gen_history = self.custom_eaMuPlusLambda(pop, toolbox, mu=population_size, lambda_=population_size, cxpb=crossover_probability, mutpb=mutation_probability, ngen=generations, verbose=False)
         
+        #self.gen_history = gen_history  # Set self.gen_history here
+
         return gen_history
     
     def subgraph_crossover(self, ind1, ind2):
-        # Get 10 subgraphs from each parent
         subgraphs_parent1 = [self.graph_generator.generate_connected_subgraph() for _ in range(10)]
         subgraphs_parent2 = [self.graph_generator.generate_connected_subgraph() for _ in range(10)]
-
-        # Combine subgraphs from both parents
         all_subgraphs = subgraphs_parent1 + subgraphs_parent2
-
-        # Determine the best subgraph based on total_utility/total_cost
         def subgraph_score(subgraph):
             total_utility = 0
             total_cost = 0
@@ -95,8 +93,11 @@ class NSGA2Optimizer2:
                 total_utility += self.graph_generator.utility_cost_data[node]['Utility Specified By Using ML']
                 total_cost += self.graph_generator.utility_cost_data[node]['Cost Specified By Using ML']
             return total_utility / total_cost
-
-        best_subgraph = max(all_subgraphs, key=lambda subgraph: subgraph_score(subgraph[0]))
+        scores = [subgraph_score(subgraph[0]) for subgraph in all_subgraphs]
+        total_score = sum(scores)
+        prob = [score / total_score for score in scores]
+        chosen_subgraph_idx = np.random.choice(range(len(all_subgraphs)), p=prob)
+        best_subgraph = all_subgraphs[chosen_subgraph_idx]
 
         # Perform crossover using the best subgraph
         subgraph_nodes = list(best_subgraph[0].nodes)
@@ -104,6 +105,21 @@ class NSGA2Optimizer2:
         temp2 = ind2[:]
         for node in subgraph_nodes:
             ind1[node], ind2[node] = ind2[node], ind1[node]
+
+        # Calculate the scores for the remaining nodes
+        def node_score(node):
+            return self.graph_generator.utility_cost_data[node]['Utility Specified By Using ML'] / self.graph_generator.utility_cost_data[node]['Cost Specified By Using ML']
+
+        remaining_nodes = [node for node in range(len(ind1)) if node not in subgraph_nodes]
+        remaining_nodes_scores = [node_score(node) for node in remaining_nodes]
+        total_score_remaining = sum(remaining_nodes_scores)
+        prob_remaining = [score / total_score_remaining for score in remaining_nodes_scores]
+
+        # Perform uniform crossover on the remaining nodes with probability-based swapping
+        for i, node in enumerate(remaining_nodes):
+            if np.random.rand() < prob_remaining[i]:  # swapping probability based on the node score
+                if np.random.rand() < 0.75:  # overall 50% chance for crossover
+                    ind1[node], ind2[node] = ind2[node], ind1[node]
 
         # Determine the parent of the selected subgraph
         selected_parent = None
@@ -302,7 +318,7 @@ class NSGA2Optimizer2:
             all_utilities.extend([ind[0] for ind in front])
         max_costs = max(all_costs)
         min_utility = min(all_utilities)
-        return [max_costs, min_utility]  # Overall reference point across all generations
+        return [1000, 250]  # Overall reference point across all generations
 
     def add_hypervolume_to_history(self, gen_history):
         reference_point = self.get_overall_reference_point(gen_history)

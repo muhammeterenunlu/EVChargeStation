@@ -73,6 +73,11 @@ class NSGA2Optimizer:
         generations = 200
         crossover_probability = 0.9
         mutation_probability = 0.1
+        # Print the parameters
+        print("Population size:", population_size, end="  ")
+        print("Generations:", generations, end="  ")
+        print("Crossover probability:", crossover_probability, end="  ")
+        print("Mutation probability:", mutation_probability)
 
         pop = generate_population(num_nodes, min_charging_stations, max_charging_stations, population_size)  # Use the same seed
 

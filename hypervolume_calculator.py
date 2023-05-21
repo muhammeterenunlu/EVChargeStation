@@ -19,17 +19,17 @@ def calculate_hypervolume(front, reference_point):
     hypervolume = hv.hypervolume(front, reference_point)
     return hypervolume
 
-def add_hypervolume_to_history(gen_history2, gen_history1, buffer=2):
-    reference_point = get_overall_reference_point([gen_history2, gen_history1], buffer)
+def add_hypervolume_to_history(gen_history1, gen_history2, buffer=2):
+    reference_point = get_overall_reference_point([gen_history1, gen_history2], buffer)
     print("Reference point: ", reference_point)
-    hypervolume2 = []
     hypervolume1 = []
-    for gen_info in gen_history2:
-        front = gen_info['fitnesses']
-        x = calculate_hypervolume(front, reference_point)
-        hypervolume2.append(x)
+    hypervolume2 = []
     for gen_info in gen_history1:
         front = gen_info['fitnesses']
+        x = calculate_hypervolume(front, reference_point)
+        hypervolume1.append(x)
+    for gen_info in gen_history2:
+        front = gen_info['fitnesses']
         y = calculate_hypervolume(front, reference_point)
-        hypervolume1.append(y)
-    return hypervolume2, hypervolume1
+        hypervolume2.append(y)
+    return hypervolume1, hypervolume2

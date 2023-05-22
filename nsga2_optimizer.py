@@ -12,6 +12,8 @@ class NSGA2Optimizer:
 
     # Add a global variable to store the crossover information
     crossover_info = []
+    # Add a variable for population size
+    population_size = None
 
     def __init__(self,graph_generator):
         self.graph_generator = graph_generator
@@ -73,6 +75,10 @@ class NSGA2Optimizer:
         generations = 200
         crossover_probability = 0.9
         mutation_probability = 0.1
+
+        # Save population_size to the class variable
+        self.population_size = population_size
+        
         # Print the parameters
         print("Population size:", population_size, end="  ")
         print("Generations:", generations, end="  ")

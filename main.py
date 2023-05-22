@@ -1,5 +1,6 @@
 import os
 import json
+import matplotlib.pyplot as plt
 from graph_generator import GraphGenerator
 from nsga2_optimizer import NSGA2Optimizer
 from nsga2_optimizer2 import NSGA2Optimizer2
@@ -17,8 +18,8 @@ def main():
     if not os.path.exists("crossover2_graph_figures_jsons"):
         os.makedirs("crossover2_graph_figures_jsons")
     # Create hypervolume and inverted generational distances folder if not exists
-    if not os.path.exists("hv&igd_json"):
-        os.makedirs("hv&igd_json")
+    if not os.path.exists("hv&igd_figures_jsons"):
+        os.makedirs("hv&igd_figures_jsons")
     # Generate the initial static graph and the dynamic graphs
     print("Please wait for the process. Graphs are being created...")
     generate_graph = GraphGenerator()
@@ -47,7 +48,7 @@ def main():
         "NSGA2Optimizer2": hypervolume2
     }
 
-    with open("hv&igd_json/hypervolumes.json", 'w') as f:
+    with open("hv&igd_figures_jsons/hypervolumes.json", 'w') as f:
             json.dump(hypervolumes, f, indent=4)
 
     print("\nHypervolume Results:")
@@ -71,7 +72,7 @@ def main():
         "NSGA2Optimizer2": igd2
     }
 
-    with open("hv&igd_json/inverted_generational_distances.json", 'w') as f:
+    with open("hv&igd_figures_jsons/inverted_generational_distances.json", 'w') as f:
             json.dump(inverted_generational_distances, f, indent=4)
 
     print("\nInverted Generational Distance Results:")
@@ -83,6 +84,38 @@ def main():
         print("Crossover 1 (paper) is better than crossover 2 according to inverted generational distance")
     elif igd1[-1] > igd2[-1]:
         print("Crossover 2 (own) is better than crossover 1 according to inverted generational distance")
+
+    # Plot hypervolumes and inverted generational distances
+    # Load hypervolumes and IGD data from json
+    with open("hv&igd_figures_jsons/hypervolumes.json", 'r') as f:
+        hypervolumes = json.load(f)
+
+    with open("hv&igd_figures_jsons/inverted_generational_distances.json", 'r') as f:
+        inverted_generational_distances = json.load(f)
+
+    # Plot hypervolumes
+    plt.figure(figsize=(10, 6))
+    plt.plot(hypervolumes['NSGA2Optimizer'], label='Crossover 1 (paper)')
+    plt.plot(hypervolumes['NSGA2Optimizer2'], label='Crossover 2 (own)')
+    plt.title(f'Hypervolume from first to last generation (Population Size: {optimize_graph.population_size})')
+    plt.xlabel('Generation')
+    plt.ylabel('Hypervolume')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig('hv&igd_figures_jsons/hypervolume_plot.png', bbox_inches='tight', dpi=300)
+    plt.show()
+
+    # Plot inverted generational distances
+    plt.figure(figsize=(10, 6))
+    plt.plot(inverted_generational_distances['NSGA2Optimizer'], label='Crossover 1 (paper)')
+    plt.plot(inverted_generational_distances['NSGA2Optimizer2'], label='Crossover 2 (own)')
+    plt.title(f'Inverted Generational Distance from first to last generation (Population Size: {optimize_graph2.population_size})')
+    plt.xlabel('Generation')
+    plt.ylabel('Inverted Generational Distance')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig('hv&igd_figures_jsons/igd_plot.png', bbox_inches='tight', dpi=300)
+    plt.show()
     
 if __name__ == "__main__":
     main()

@@ -71,8 +71,8 @@ class NSGA2Optimizer:
         toolbox.decorate("evaluate", tools.DeltaPenalty(feasible, (-1e9, -1e9)))
 
         # Set parameters for the NSGA-II algorithm
-        population_size = 200
-        generations = 200
+        population_size = 100
+        generations = 500
         crossover_probability = 0.9
         mutation_probability = 0.1
 
@@ -275,7 +275,7 @@ class NSGA2Optimizer:
         plt.title("Pareto Front")
         plt.legend()
         plt.savefig('crossover1_graph_figures_jsons/pareto_front.png', bbox_inches='tight', dpi=300)
-        plt.show()
+   
     """
     def calculate_hypervolume(self, front, reference_point):
         # Convert the front and the reference point to NumPy arrays

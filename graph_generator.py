@@ -13,8 +13,8 @@ class GraphGenerator:
 
     def __init__(self):
         connected = False
-        self.edge_creation_prob = 0.05
-        self.num_nodes = 50
+        self.edge_creation_prob = 0.075
+        self.num_nodes = 150
 
         while not connected:
             # Generate a random graph
@@ -120,8 +120,6 @@ class GraphGenerator:
 
         # Save the visualization to a file
         plt.savefig('graph_figures_jsons/initial_static_graph.png', dpi=300)   
-
-        plt.show()
 
     def write_connected_nodes_json(self):
         connected_nodes = {}
@@ -264,7 +262,7 @@ class GraphGenerator:
         with open('graph_figures_jsons/dynamic_graphs_data.json', 'w') as f:
             json.dump(self.dynamic_graphs_data, f, indent=4)
 
-    # K-means clustering. Each cluster represents utility of a charge station.
+    # K-means clustering. Each cluster represents utility and cost of a charge station in a node.
     def kmeans_clustering(self):
         averaged_data = []
         # Load JSON data 
@@ -297,7 +295,7 @@ class GraphGenerator:
                 'Traffic': traffic_sum / count,
                 'Population_change': population_change_sum / count,
                 'Traffic_change': traffic_change_sum / count,
-                'Total Utility of 1 CS': int(0.25 * (0.3 * population_sum / count + 0.7 * traffic_sum / count) + 0.75 * (0.3 * abs(population_change_sum) / count + 0.7 * abs(traffic_change_sum) / count / count)),
+                'Total Utility of 1 CS': int(0.25 * (0.3 * population_sum / count + 0.7 * traffic_sum / count) + 0.75 * (0.3 * abs(population_change_sum) / count + 0.7 * abs(traffic_change_sum) / count)),
                 'Total Cost of 1 CS': int(total_cost_sum / count)})
 
         # Normalize the 'Total Utility of 1 CS' and 'Total Cost of 1 CS' values

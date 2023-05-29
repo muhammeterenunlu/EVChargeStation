@@ -57,9 +57,9 @@ def main():
 
     # print which crossover is better
     if hypervolume1[-1] > hypervolume2[-1]:
-        print("Crossover 1 (paper) is better than crossover 2 according to hypervolume")
+        print("Crossover 1 (paper) is better than Crossover 2 (own) according to hypervolume")
     elif hypervolume1[-1] < hypervolume2[-1]:
-        print("Crossover 2 (own) is better than crossover 1 according to hypervolume")
+        print("Crossover 2 (own) is better than Crossover 1 (paper) according to hypervolume")
 
     # Calculate IGD
     pareto_optimal_set = create_reference_set([optimize_graph.gen_history, optimize_graph2.gen_history])
@@ -81,9 +81,9 @@ def main():
 
     # print which crossover is better
     if igd1[-1] < igd2[-1]:
-        print("Crossover 1 (paper) is better than crossover 2 according to inverted generational distance")
+        print("Crossover 1 (paper) is better than Crossover 2 (own) according to inverted generational distance")
     elif igd1[-1] > igd2[-1]:
-        print("Crossover 2 (own) is better than crossover 1 according to inverted generational distance")
+        print("Crossover 2 (own) is better than Crossover 1 (paper) according to inverted generational distance")
 
     # Plot hypervolumes and inverted generational distances
     # Load hypervolumes and IGD data from json

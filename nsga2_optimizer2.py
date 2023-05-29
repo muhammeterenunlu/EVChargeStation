@@ -71,8 +71,8 @@ class NSGA2Optimizer2:
         toolbox.decorate("evaluate", tools.DeltaPenalty(feasible, (-1e9, -1e9)))
 
         # Set parameters for the NSGA-II algorithm
-        population_size = 200
-        generations = 200
+        population_size = 100
+        generations = 500
         crossover_probability = 0.9
         mutation_probability = 0.1
 
@@ -129,7 +129,7 @@ class NSGA2Optimizer2:
         # Perform uniform crossover on the remaining nodes with probability-based swapping
         for i, node in enumerate(remaining_nodes):
             if np.random.rand() < prob_remaining[i]:  # swapping probability based on the node score
-                if np.random.rand() < 0.75:  # overall 50% chance for crossover
+                if np.random.rand() < 0.75:  # overall 75% chance for crossover
                     ind1[node], ind2[node] = ind2[node], ind1[node]
 
         # Determine the parent of the selected subgraph
@@ -308,7 +308,6 @@ class NSGA2Optimizer2:
         plt.title("Pareto Front")
         plt.legend()
         plt.savefig('crossover2_graph_figures_jsons/pareto_front.png', bbox_inches='tight', dpi=300)
-        plt.show()
 
     """
     def calculate_hypervolume(self, front, reference_point):
